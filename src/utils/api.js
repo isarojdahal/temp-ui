@@ -34,7 +34,7 @@ export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   }
 }
 
-export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, frameworkId, file, facilityType, assessmentType }) {
+export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames }) {
   const formData = new FormData();
   if (file) formData.append('file', file);
   if (prompt) formData.append('prompt', prompt);
@@ -42,8 +42,52 @@ export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, 
   const facility = facilityType || frameworkId || 'health_facility';
   const assessment = assessmentType || 'flood';
 
+  const defaultCols = [
+    {
+      name: 'flood_zone_status',
+      datatype: 'boolean',
+      description: 'Yes=1  No=0'
+    },
+    {
+      name: 'school_closure_days',
+      datatype: 'range',
+      description: 'no_closure=0 ;  1 day = 0.3 ;  2–3 day =0.6 ;  4–7 day =0.8 ;  >7day =1'
+    }
+  ];
+
+  let rawCols = surveyFileColumnNames;
+  let parsedCols = [];
+
+  if (typeof rawCols === 'string' && rawCols.trim()) {
+    const trimmed = rawCols.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        parsedCols = JSON.parse(trimmed);
+      } catch (e) {
+        parsedCols = [];
+      }
+    } else {
+      parsedCols = trimmed
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .map((colName) => ({
+          name: colName,
+          column_name: colName,
+          datatype: 'categorical',
+          data_type: 'categorical',
+          description: ''
+        }));
+    }
+  } else if (Array.isArray(rawCols)) {
+    parsedCols = rawCols;
+  }
+
+  const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
+  const colsParam = encodeURIComponent(JSON.stringify(cols));
+
   const res = await axios.post(
-    `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}`,
+    `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`,
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -51,6 +95,7 @@ export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, 
   );
   return res.data;
 }
+
 
 // Chatbot endpoints
 export async function fetchChatSuggestions(baseUrl = DEFAULT_CHATBOT_URL, apiKey = DEFAULT_RAG_TOKEN, limit = 4) {

@@ -471,10 +471,11 @@ export function ChatbotView({ chatbotUrl, chatbotOnline, apiKey, setApiKey }) {
                 <Sparkles size={17} className="text-amber-600 animate-pulse" /> AI-Grounded Climate Prompt Starters
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {suggestions.map((sug) => (
+                {suggestions.map((sug, idx) => (
                   <button
-                    key={sug.id}
+                    key={sug.id || `suggestion-${idx}`}
                     onClick={() => handleSend(sug.prompt)}
+
                     disabled={isStreaming}
                     className="text-left p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#208661] hover:bg-[#e9f3f0]/60 transition-all space-y-1.5 group cursor-pointer shadow-xs"
                   >

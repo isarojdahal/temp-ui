@@ -47,6 +47,20 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [prompt, setPrompt] = useState('Flood Risk & Vulnerability Assessment');
   const [facilityType, setFacilityType] = useState('health_facility');
   const [assessmentType, setAssessmentType] = useState('flood');
+  const [surveyColumnsText, setSurveyColumnsText] = useState(
+    JSON.stringify([
+      {
+        name: "flood_zone_status",
+        datatype: "boolean",
+        description: "Yes=1  No=0"
+      },
+      {
+        name: "school_closure_days",
+        datatype: "range",
+        description: "no_closure=0 ;  1 day = 0.3 ;  2–3 day =0.6 ;  4–7 day =0.8 ;  >7day =1"
+      }
+    ], null, 2)
+  );
   const [frameworkId, setFrameworkId] = useState('');
   const [frameworksList, setFrameworksList] = useState([]);
   const [file, setFile] = useState(null);
@@ -95,7 +109,8 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         frameworkId,
         file,
         facilityType,
-        assessmentType
+        assessmentType,
+        surveyFileColumnNames: surveyColumnsText
       });
 
       if (data && data.graph) {
@@ -105,10 +120,29 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
       }
     } catch (err) {
       console.error('MCVRA generation error:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to generate graph from backend.');
+      let detailMsg = 'Failed to generate graph from backend.';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          detailMsg = detail;
+        } else if (Array.isArray(detail)) {
+          detailMsg = detail
+            .map((item) => {
+              const locStr = item.loc ? item.loc.filter((l) => l !== 'body' && l !== 'query').join(' > ') : '';
+              return `${locStr ? locStr + ': ' : ''}${item.msg || JSON.stringify(item)}`;
+            })
+            .join(' | ');
+        } else if (typeof detail === 'object') {
+          detailMsg = JSON.stringify(detail);
+        }
+      } else if (err.message) {
+        detailMsg = err.message;
+      }
+      setError(detailMsg);
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleExportJson = () => {
@@ -267,7 +301,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Survey Data (.xlsx / .csv)</label>
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Framework File (.xlsx / .csv)</label>
               <div className="p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:border-[#208661] transition">
                 <input
                   type="file"
@@ -284,6 +318,25 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
                   <button type="button" onClick={() => setFile(null)} className="text-rose-600 font-bold hover:text-rose-800">×</button>
                 </div>
               )}
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[11px] font-semibold text-slate-700 block">
+                  Survey Column Fields
+                </label>
+                <span className="text-[9px] text-slate-400 font-medium">Comma-separated or JSON</span>
+              </div>
+              <textarea
+                rows={2}
+                value={surveyColumnsText}
+                onChange={(e) => setSurveyColumnsText(e.target.value)}
+                placeholder="e.g. flood_zone_status, river_distance_m, building_typology"
+                className="w-full text-xs p-2 rounded-xl border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">
+                Specify survey dataset column names to map against assessment question indicators.
+              </p>
             </div>
 
             <div className="flex gap-2 pt-1">

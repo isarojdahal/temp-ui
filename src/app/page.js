@@ -18,7 +18,7 @@ import { Button } from '../components/ui/button';
 import { Sparkles, MessageSquareText } from 'lucide-react';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('chatbot');
+  const [activeTab, setActiveTab] = useState('mcvra');
   const [mcvraUrl, setMcvraUrl] = useState(DEFAULT_MCVRA_URL);
   const [chatbotUrl, setChatbotUrl] = useState(DEFAULT_CHATBOT_URL);
   const [apiKey, setApiKey] = useState(DEFAULT_RAG_TOKEN);
@@ -27,6 +27,22 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem('drishti_active_tab');
+      if (savedTab) {
+        setActiveTab(savedTab);
+      }
+    }
+  }, []);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('drishti_active_tab', tab);
+    }
+  };
 
   const pollHealth = async () => {
     const mcvraStatus = await checkMcvraHealth(mcvraUrl);
@@ -46,7 +62,7 @@ export default function Home() {
       {/* Top Application Header */}
       <Header
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         mcvraOnline={mcvraOnline}
         chatbotOnline={chatbotOnline}
         sidebarOpen={sidebarOpen}
