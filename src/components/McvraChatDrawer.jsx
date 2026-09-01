@@ -26,6 +26,8 @@ export function McvraChatDrawer({
   onClose,
   mcvraUrl,
   rawTreeData,
+  assessmentId,
+  userId,
   assessmentName,
   domain,
   onApplyUpdatedGraph,
@@ -94,9 +96,11 @@ I can interact directly with your current assessment graph. Try asking me to:
 
       const res = await chatWithMcvra(mcvraUrl, {
         message: textToSend.trim(),
+        assessmentId,
+        userId,
+        domain: domain || 'pokhara.dastaa.org',
         graph: graphPayload,
         assessmentName: assessmentName || 'MCVRA Assessment',
-        domain: domain || 'health_facility',
         history
       });
 

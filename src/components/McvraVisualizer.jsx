@@ -49,6 +49,8 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [prompt, setPrompt] = useState('Flood Risk & Vulnerability Assessment');
   const [facilityType, setFacilityType] = useState('health_facility');
   const [assessmentType, setAssessmentType] = useState('flood');
+  const [assessmentId, setAssessmentId] = useState('asm-default');
+  const [userId, setUserId] = useState('user-1');
   const [surveyColumnsText, setSurveyColumnsText] = useState(
     JSON.stringify([
       {
@@ -119,6 +121,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
     });
 
     try {
+      const currentDomain = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'pokhara.dastaa.org';
       const data = await generateMcvraGraphStream(
         mcvraUrl,
         {
@@ -127,7 +130,10 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           file,
           facilityType,
           assessmentType,
-          surveyFileColumnNames: surveyColumnsText
+          surveyFileColumnNames: surveyColumnsText,
+          assessmentId,
+          userId,
+          domain: currentDomain
         },
         (progress) => {
           setStreamProgress((prev) => {
@@ -163,7 +169,10 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           file,
           facilityType,
           assessmentType,
-          surveyFileColumnNames: surveyColumnsText
+          surveyFileColumnNames: surveyColumnsText,
+          assessmentId,
+          userId,
+          domain: currentDomain
         });
         if (fallbackData && fallbackData.graph) {
           loadTreeData(fallbackData.graph, fallbackData.domain || facilityType || 'health_facility');
@@ -674,6 +683,8 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         onClose={() => setIsChatOpen(false)}
         mcvraUrl={mcvraUrl}
         rawTreeData={rawTreeData || sampleMCVRATree}
+        assessmentId={assessmentId}
+        userId={userId}
         assessmentName={prompt}
         domain={domain}
         onApplyUpdatedGraph={handleApplyUpdatedGraph}

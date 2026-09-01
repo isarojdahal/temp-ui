@@ -34,7 +34,10 @@ export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   }
 }
 
-export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames }) {
+export async function generateMcvraGraph(
+  baseUrl = DEFAULT_MCVRA_URL,
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId }
+) {
   const formData = new FormData();
   if (file) formData.append('file', file);
   if (prompt) formData.append('prompt', prompt);
@@ -86,19 +89,20 @@ export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, 
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  const res = await axios.post(
-    `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`,
-    formData,
-    {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }
-  );
+  let url = `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
+  if (domain) url += `&domain=${encodeURIComponent(domain)}`;
+  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
+
+  const res = await axios.post(url, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return res.data;
 }
 
 export async function generateMcvraGraphStream(
   baseUrl = DEFAULT_MCVRA_URL,
-  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames },
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId },
   onProgress
 ) {
   const formData = new FormData();
@@ -152,7 +156,10 @@ export async function generateMcvraGraphStream(
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  const url = `${baseUrl}/generate-mcvra?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  let url = `${baseUrl}/generate-mcvra?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
+  if (domain) url += `&domain=${encodeURIComponent(domain)}`;
+  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -224,16 +231,21 @@ export async function generateMcvraGraphStream(
 
 export async function chatWithMcvra(
   baseUrl = DEFAULT_MCVRA_URL,
-  { message, graph, assessmentName, domain, history, layoutOptions }
+  { message, graph, assessmentId, userId, assessmentName, domain, history, layoutOptions }
 ) {
   const payload = {
     message,
-    graph: Array.isArray(graph) ? graph : (graph ? [graph] : []),
-    assessment_name: assessmentName,
+    assessment_id: assessmentId || undefined,
+    user_id: userId || undefined,
     domain: domain || 'health_facility',
+    assessment_name: assessmentName,
     history: history || [],
     layout_options: layoutOptions || null,
   };
+
+  if (graph) {
+    payload.graph = Array.isArray(graph) ? graph : [graph];
+  }
 
   const res = await axios.post(`${baseUrl}/chat-with-mcvra`, payload, {
     headers: { 'Content-Type': 'application/json' },
