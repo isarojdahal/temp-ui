@@ -26,7 +26,7 @@ export async function checkChatbotHealth(baseUrl = DEFAULT_CHATBOT_URL) {
 // MCVRA Generator endpoints
 export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   try {
-    const res = await axios.get(`${baseUrl}/mcda/frameworks`);
+    const res = await axios.get(`${baseUrl}/frameworks`);
     return res.data;
   } catch (e) {
     console.error('Error fetching MCVRA frameworks:', e);
@@ -93,6 +93,149 @@ export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, 
       headers: { 'Content-Type': 'multipart/form-data' }
     }
   );
+  return res.data;
+}
+
+export async function generateMcvraGraphStream(
+  baseUrl = DEFAULT_MCVRA_URL,
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames },
+  onProgress
+) {
+  const formData = new FormData();
+  if (file) formData.append('file', file);
+  if (prompt) formData.append('prompt', prompt);
+
+  const facility = facilityType || frameworkId || 'health_facility';
+  const assessment = assessmentType || 'flood';
+
+  const defaultCols = [
+    {
+      name: 'flood_zone_status',
+      datatype: 'boolean',
+      description: 'Yes=1  No=0'
+    },
+    {
+      name: 'school_closure_days',
+      datatype: 'range',
+      description: 'no_closure=0 ;  1 day = 0.3 ;  2–3 day =0.6 ;  4–7 day =0.8 ;  >7day =1'
+    }
+  ];
+
+  let rawCols = surveyFileColumnNames;
+  let parsedCols = [];
+
+  if (typeof rawCols === 'string' && rawCols.trim()) {
+    const trimmed = rawCols.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        parsedCols = JSON.parse(trimmed);
+      } catch (e) {
+        parsedCols = [];
+      }
+    } else {
+      parsedCols = trimmed
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .map((colName) => ({
+          name: colName,
+          column_name: colName,
+          datatype: 'categorical',
+          data_type: 'categorical',
+          description: ''
+        }));
+    }
+  } else if (Array.isArray(rawCols)) {
+    parsedCols = rawCols;
+  }
+
+  const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
+  const colsParam = encodeURIComponent(JSON.stringify(cols));
+
+  const url = `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`MCVRA streaming request failed (${response.status}): ${errorText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let finalResult = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data:')) continue;
+
+      const dataStr = trimmed.slice(5).trim();
+      if (!dataStr) continue;
+
+      try {
+        const payload = JSON.parse(dataStr);
+        if (payload.event === 'progress' || payload.event === 'start') {
+          if (onProgress) onProgress(payload);
+        } else if (payload.event === 'complete') {
+          finalResult = payload.result;
+        } else if (payload.event === 'error') {
+          throw new Error(payload.detail || 'LangGraph pipeline streaming error');
+        }
+      } catch (err) {
+        if (err.message.includes('LangGraph pipeline streaming error') || err.message.includes('MCVRA streaming request failed')) {
+          throw err;
+        }
+        console.warn('Error parsing SSE chunk:', err);
+      }
+    }
+  }
+
+  if (buffer.trim().startsWith('data:')) {
+    try {
+      const payload = JSON.parse(buffer.trim().slice(5).trim());
+      if (payload.event === 'complete') finalResult = payload.result;
+      if (payload.event === 'error') throw new Error(payload.detail || 'LangGraph streaming error');
+    } catch (e) {
+      // trailing chunk parse bypass
+    }
+  }
+
+  if (!finalResult) {
+    throw new Error('No final graph payload received from streaming endpoint.');
+  }
+
+  return finalResult;
+}
+
+export async function chatWithMcvra(
+  baseUrl = DEFAULT_MCVRA_URL,
+  { message, graph, assessmentName, domain, history, layoutOptions }
+) {
+  const payload = {
+    message,
+    graph: Array.isArray(graph) ? graph : (graph ? [graph] : []),
+    assessment_name: assessmentName,
+    domain: domain || 'health_facility',
+    history: history || [],
+    layout_options: layoutOptions || null,
+  };
+
+  const res = await axios.post(`${baseUrl}/chat-with-mcvra`, payload, {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 60000,
+  });
   return res.data;
 }
 

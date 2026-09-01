@@ -35,8 +35,9 @@ import { nodeTypes } from './CustomNodes';
 import { CurvedEdge } from './CurvedEdge';
 import { transformMCVRATreeToReactFlow } from '../utils/graphTransformer';
 import { sampleMCVRATree } from '../utils/sampleTree';
-import { generateMcvraGraph, fetchMcvraFrameworks } from '../utils/api';
+import { generateMcvraGraph, generateMcvraGraphStream, fetchMcvraFrameworks } from '../utils/api';
 import { Button } from './ui/button';
+import { McvraChatDrawer } from './McvraChatDrawer';
 
 const edgeTypes = { curved: CurvedEdge };
 
@@ -44,6 +45,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [prompt, setPrompt] = useState('Flood Risk & Vulnerability Assessment');
   const [facilityType, setFacilityType] = useState('health_facility');
   const [assessmentType, setAssessmentType] = useState('flood');
@@ -65,6 +67,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [frameworksList, setFrameworksList] = useState([]);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [streamProgress, setStreamProgress] = useState(null);
   const [error, setError] = useState(null);
   const [domain, setDomain] = useState('health_facility');
   const [rawTreeData, setRawTreeData] = useState(null);
@@ -98,20 +101,50 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
     setTimeout(() => fitView({ padding: 0.2 }), 100);
   }, [fitView, setNodes, setEdges]);
 
+  const handleApplyUpdatedGraph = useCallback((updatedGraph) => {
+    if (!updatedGraph || !updatedGraph.length) return;
+    loadTreeData(updatedGraph, domain);
+  }, [loadTreeData, domain]);
+
   const handleGenerate = async (e) => {
     e?.preventDefault();
     setLoading(true);
     setError(null);
+    setStreamProgress({
+      step: 1,
+      total_steps: 7,
+      title: 'Initializing LangGraph Engine',
+      description: 'Preparing facility framework and survey column schemas...',
+      completedNodes: []
+    });
 
     try {
-      const data = await generateMcvraGraph(mcvraUrl, {
-        prompt,
-        frameworkId,
-        file,
-        facilityType,
-        assessmentType,
-        surveyFileColumnNames: surveyColumnsText
-      });
+      const data = await generateMcvraGraphStream(
+        mcvraUrl,
+        {
+          prompt,
+          frameworkId,
+          file,
+          facilityType,
+          assessmentType,
+          surveyFileColumnNames: surveyColumnsText
+        },
+        (progress) => {
+          setStreamProgress((prev) => {
+            const completed = prev?.completedNodes ? [...prev.completedNodes] : [];
+            if (progress.node && !completed.includes(progress.node)) {
+              completed.push(progress.node);
+            }
+            return {
+              step: progress.step || prev?.step || 1,
+              total_steps: progress.total_steps || 7,
+              title: progress.title || 'Processing Graph Node',
+              description: progress.description || progress.message || 'Executing LangGraph agent...',
+              completedNodes: completed,
+            };
+          });
+        }
+      );
 
       if (data && data.graph) {
         loadTreeData(data.graph, data.domain || facilityType || 'health_facility');
@@ -119,30 +152,35 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         throw new Error('Invalid graph payload returned from MCVRA generator.');
       }
     } catch (err) {
-      console.error('MCVRA generation error:', err);
-      let detailMsg = 'Failed to generate graph from backend.';
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        if (typeof detail === 'string') {
-          detailMsg = detail;
-        } else if (Array.isArray(detail)) {
-          detailMsg = detail
-            .map((item) => {
-              const locStr = item.loc ? item.loc.filter((l) => l !== 'body' && l !== 'query').join(' > ') : '';
-              return `${locStr ? locStr + ': ' : ''}${item.msg || JSON.stringify(item)}`;
-            })
-            .join(' | ');
-        } else if (typeof detail === 'object') {
-          detailMsg = JSON.stringify(detail);
+      console.error('MCVRA streaming generation error, attempting synchronous fallback:', err);
+      try {
+        const fallbackData = await generateMcvraGraph(mcvraUrl, {
+          prompt,
+          frameworkId,
+          file,
+          facilityType,
+          assessmentType,
+          surveyFileColumnNames: surveyColumnsText
+        });
+        if (fallbackData && fallbackData.graph) {
+          loadTreeData(fallbackData.graph, fallbackData.domain || facilityType || 'health_facility');
+        } else {
+          throw new Error('Invalid graph payload returned from MCVRA generator fallback.');
         }
-      } else if (err.message) {
-        detailMsg = err.message;
+      } catch (fallbackErr) {
+        let detailMsg = 'Failed to generate graph from backend.';
+        if (fallbackErr.response?.data?.detail) {
+          const detail = fallbackErr.response.data.detail;
+          detailMsg = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        } else if (fallbackErr.message) {
+          detailMsg = fallbackErr.message;
+        }
+        setError(detailMsg);
       }
-      setError(detailMsg);
     } finally {
       setLoading(false);
+      setStreamProgress(null);
     }
-
   };
 
   const handleExportJson = () => {
@@ -353,6 +391,63 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
             </div>
           </form>
 
+          {loading && streamProgress && (
+            <div className="p-3.5 rounded-xl bg-emerald-50/90 border border-emerald-200/90 shadow-sm space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-[#208661] animate-pulse" />
+                  LangGraph Pipeline Active
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#208661] text-white">
+                  Step {streamProgress.step} of {streamProgress.total_steps}
+                </span>
+              </div>
+
+              <div className="w-full bg-emerald-200/60 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-[#208661] h-1.5 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(100, Math.max(10, (streamProgress.step / streamProgress.total_steps) * 100))}%` }}
+                />
+              </div>
+
+              <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200/60 space-y-0.5">
+                <div className="text-[11px] font-bold text-slate-900 flex items-center gap-1.5">
+                  <RefreshCw size={12} className="animate-spin text-[#208661]" />
+                  {streamProgress.title}
+                </div>
+                <p className="text-[10px] text-slate-600 leading-tight">
+                  {streamProgress.description}
+                </p>
+              </div>
+
+              <div className="space-y-1 pt-1 border-t border-emerald-200/50">
+                {[
+                  { key: "select_framework_and_generate_components", label: "Pillar Components Agent" },
+                  { key: "generate_parameter_nodes", label: "Parameter Sub-criteria Agent" },
+                  { key: "generate_optional_nodes", label: "Optional GIS & Capacity Agent" },
+                  { key: "generate_question_ideas", label: "Question Generator Agent" },
+                  { key: "map_survey_columns", label: "Survey Column Alignment Agent" },
+                  { key: "evaluate_formulas_and_layout", label: "Formula & Layout Agent" },
+                  { key: "calculate_usage_metadata", label: "Usage & Pricing Agent" },
+                ].map((agent, idx) => {
+                  const isDone = streamProgress.completedNodes?.includes(agent.key);
+                  const isCurrent = streamProgress.step === idx + 1;
+                  return (
+                    <div key={agent.key} className="flex items-center justify-between text-[10px]">
+                      <span className={`flex items-center gap-1.5 ${isDone ? 'text-emerald-800 font-semibold' : isCurrent ? 'text-slate-900 font-bold' : 'text-slate-400'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isDone ? 'bg-emerald-500' : isCurrent ? 'bg-[#208661] animate-ping' : 'bg-slate-300'}`} />
+                        {agent.label}
+                      </span>
+                      <span className="font-mono text-[9px] font-semibold">
+                        {isDone ? '✓ Done' : isCurrent ? 'Working...' : 'Waiting'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -403,6 +498,17 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
               <Copy size={13} /> {copied ? 'Copied' : 'Copy'}
             </Button>
           </div>
+
+          {/* AI Graph Copilot Chat Trigger */}
+          <Button
+            variant="gradient"
+            size="sm"
+            onClick={() => setIsChatOpen(true)}
+            className="w-full bg-[#208661] hover:bg-[#1a6d4f] text-white shadow-sm flex items-center justify-center gap-2 font-semibold"
+          >
+            <Sparkles size={14} className="animate-pulse" />
+            Chat with Graph Copilot
+          </Button>
 
           {/* Node Inspector */}
           <div className="card-rich space-y-2">
@@ -489,6 +595,12 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
               <Wand2 size={15} className="text-[#208661]" />
             </ControlButton>
             <ControlButton
+              title="Chat with MCVRA Graph AI"
+              onClick={() => setIsChatOpen((prev) => !prev)}
+            >
+              <Sparkles size={15} className="text-[#208661]" />
+            </ControlButton>
+            <ControlButton
               title={showMiniMap ? 'Hide MiniMap' : 'Show MiniMap'}
               onClick={() => setShowMiniMap((prev) => !prev)}
             >
@@ -524,6 +636,17 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           )}
         </ReactFlow>
 
+        {/* Floating Chat with Graph AI Button on Canvas */}
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="absolute top-4 right-4 z-20 bg-white/95 hover:bg-white backdrop-blur-md border border-[#208661]/40 text-[#208661] hover:text-[#1a6d4f] shadow-lg shadow-emerald-900/10 px-3.5 py-2 rounded-full flex items-center gap-2 text-xs font-bold transition-all hover:scale-105 cursor-pointer group"
+          title="Open MCVRA Graph Copilot"
+        >
+          <div className="w-2 h-2 rounded-full bg-[#208661] animate-ping" />
+          <Sparkles size={14} className="text-[#208661] group-hover:rotate-12 transition-transform" />
+          <span>Chat with Graph AI</span>
+        </button>
+
         {/* Legend Card - integrated-tool-frontend color palette */}
         <div className="absolute bottom-5 right-5 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-xl flex gap-3 text-xs text-slate-700 shadow-md z-10">
           <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#E9F3F0] border border-[#208661]" /> Goal / Criteria</div>
@@ -533,6 +656,18 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F1CBCB] border border-rose-400" /> Raster</div>
         </div>
       </div>
+
+      {/* MCVRA Graph AI Copilot Drawer */}
+      <McvraChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        mcvraUrl={mcvraUrl}
+        rawTreeData={rawTreeData || sampleMCVRATree}
+        assessmentName={prompt}
+        domain={domain}
+        onApplyUpdatedGraph={handleApplyUpdatedGraph}
+        onFitView={() => fitView({ padding: 0.2 })}
+      />
     </div>
   );
 }

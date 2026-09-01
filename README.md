@@ -11,6 +11,7 @@ This is a [Next.js](https://nextjs.org) application powering the DRISHTI-AI inte
 - **Beautify / Auto-Layout**: One-click wand tool in graph controls (`handleBeautify`) to auto-arrange tree node positions dynamically.
 - **PNG Canvas Export**: High-resolution image snapshot export (`handleExportPng` via `html-to-image`) for downloading risk maps.
 - **Interactive MiniMap Toggle**: Show/hide mini-map overlay directly from canvas control panel.
+- **MCVRA Graph Copilot Drawer**: Interactive conversational assistant (`McvraChatDrawer`) integrated directly with the active MCVRA graph to re-arrange node positions in real-time, inspect calculation formulas, trace attached components and children, and summarize graph statistics.
 - **Floating AI Chat Copilot Drawer**: Slide-over AI Assistant drawer (`FloatingChatDrawer`) accessible across all views with real-time SSE streaming, Markdown rendering, RAG source inspection, `#208661` message bubbles, and quick prompt chips.
 - **Node Inspector**: Real-time parameter inspection, formula viewing, choices score mapping, and raw JSON export.
 
