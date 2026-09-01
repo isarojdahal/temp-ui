@@ -18,7 +18,7 @@ import {
   ArrowRight,
   Maximize2
 } from 'lucide-react';
-import { chatWithMcvra } from '../utils/api';
+import { chatWithMcvra, chatWithMcvraStream } from '../utils/api';
 import { Button } from './ui/button';
 
 export function McvraChatDrawer({
@@ -82,43 +82,88 @@ I can interact directly with your current assessment graph. Try asking me to:
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantMsgId = `assistant-${Date.now()}`;
+    let accumulatedContent = '';
+
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        isStreaming: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
     if (!queryText) setInputQuery('');
     setLoading(true);
 
     try {
       // Build conversation history for context
       const history = messages
-        .filter((m) => m.id !== 'welcome-mcvra')
+        .filter((m) => m.id !== 'welcome-mcvra' && !m.isStreaming)
         .map((m) => ({ role: m.role, content: m.content }));
 
       const graphPayload = rawTreeData || [];
 
-      const res = await chatWithMcvra(mcvraUrl, {
-        message: textToSend.trim(),
-        assessmentId,
-        userId,
-        domain: domain || 'pokhara.dastaa.org',
-        graph: graphPayload,
-        assessmentName: assessmentName || 'MCVRA Assessment',
-        history
-      });
+      let res = null;
+      try {
+        res = await chatWithMcvraStream(
+          mcvraUrl,
+          {
+            message: textToSend.trim(),
+            assessmentId,
+            userId,
+            domain: domain || 'pokhara.dastaa.org',
+            graph: graphPayload,
+            assessmentName: assessmentName || 'MCVRA Assessment',
+            history
+          },
+          (delta, eventData) => {
+            if (eventData?.event === 'chunk' && delta) {
+              accumulatedContent += delta;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: accumulatedContent, isStreaming: true }
+                    : msg
+                )
+              );
+            }
+          }
+        );
+      } catch (streamErr) {
+        console.warn('MCVRA streaming failed, falling back to sync chat:', streamErr);
+        res = await chatWithMcvra(mcvraUrl, {
+          message: textToSend.trim(),
+          assessmentId,
+          userId,
+          domain: domain || 'pokhara.dastaa.org',
+          graph: graphPayload,
+          assessmentName: assessmentName || 'MCVRA Assessment',
+          history
+        });
+      }
 
-      const assistantMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: res.reply || 'No response received.',
-        action_taken: res.action_taken,
-        summary: res.summary,
-        usage: res.usage,
-        has_updated_graph: Boolean(res.updated_graph && res.updated_graph.length > 0),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? {
+              ...msg,
+              content: res?.reply || accumulatedContent || 'No response received.',
+              action_taken: res?.action_taken,
+              summary: res?.summary,
+              usage: res?.usage,
+              has_updated_graph: Boolean(res?.updated_graph && res.updated_graph.length > 0),
+              isStreaming: false,
+            }
+            : msg
+        )
+      );
 
       // If graph rearrangement was returned, apply it to the canvas in real-time!
-      if (res.updated_graph && res.updated_graph.length > 0 && onApplyUpdatedGraph) {
+      if (res?.updated_graph && res.updated_graph.length > 0 && onApplyUpdatedGraph) {
         onApplyUpdatedGraph(res.updated_graph);
       }
     } catch (err) {
@@ -132,15 +177,17 @@ I can interact directly with your current assessment graph. Try asking me to:
         errMsg = err.message;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: `⚠️ **Error:** ${errMsg}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? {
+              ...msg,
+              content: `⚠️ **Error:** ${errMsg}`,
+              isStreaming: false,
+            }
+            : msg
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -228,12 +275,24 @@ I can interact directly with your current assessment graph. Try asking me to:
               <div className={`space-y-1.5 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
                 <div
                   className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${isUser
-                      ? 'bg-[#208661] text-white rounded-tr-xs'
-                      : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs'
+                    ? 'bg-[#208661] text-white rounded-tr-xs'
+                    : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs'
                     }`}
                 >
                   <div className="prose prose-xs max-w-none text-inherit prose-headings:text-inherit prose-headings:font-bold prose-headings:mb-1.5 prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-pre:p-2 prose-pre:rounded-lg prose-table:text-xs">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    {msg.content ? (
+                      <>
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        {msg.isStreaming && (
+                          <span className="inline-block w-1.5 h-3.5 bg-[#208661] ml-0.5 animate-pulse rounded-xs align-middle" />
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-slate-400 py-1">
+                        <Sparkles size={13} className="text-[#208661] animate-pulse" />
+                        <span className="italic">Thinking & inspecting graph...</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Rearrangement canvas sync badge */}
@@ -271,7 +330,7 @@ I can interact directly with your current assessment graph. Try asking me to:
           );
         })}
 
-        {loading && (
+        {loading && !messages.some((m) => m.isStreaming) && (
           <div className="flex gap-3 items-center">
             <div className="w-7 h-7 rounded-full bg-white border border-slate-200 text-[#208661] flex items-center justify-center shrink-0">
               <RefreshCw size={14} className="animate-spin" />

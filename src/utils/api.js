@@ -254,6 +254,88 @@ export async function chatWithMcvra(
   return res.data;
 }
 
+export async function chatWithMcvraStream(
+  baseUrl = DEFAULT_MCVRA_URL,
+  { message, graph, assessmentId, userId, assessmentName, domain, history, layoutOptions },
+  onChunk
+) {
+  const payload = {
+    message,
+    assessment_id: assessmentId || undefined,
+    user_id: userId || undefined,
+    domain: domain || 'health_facility',
+    assessment_name: assessmentName,
+    history: history || [],
+    layout_options: layoutOptions || null,
+    stream: true,
+  };
+
+  if (graph) {
+    payload.graph = Array.isArray(graph) ? graph : [graph];
+  }
+
+  const response = await fetch(`${baseUrl}/chat-with-mcvra?stream=true`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`MCVRA chat streaming failed (${response.status}): ${errText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let finalResult = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data:')) continue;
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr) continue;
+
+      try {
+        const eventData = JSON.parse(jsonStr);
+        if (eventData.event === 'chunk') {
+          if (onChunk) onChunk(eventData.delta, eventData);
+        } else if (eventData.event === 'start') {
+          if (onChunk) onChunk('', eventData);
+        } else if (eventData.event === 'complete') {
+          finalResult = eventData;
+          if (onChunk) onChunk('', eventData);
+        } else if (eventData.event === 'error') {
+          throw new Error(eventData.detail || 'Chat streaming error');
+        }
+      } catch (err) {
+        if (err.message && err.message.includes('Chat streaming error')) throw err;
+        console.warn('Error parsing SSE chunk:', err);
+      }
+    }
+  }
+
+  if (buffer.trim().startsWith('data:')) {
+    try {
+      const eventData = JSON.parse(buffer.trim().slice(5).trim());
+      if (eventData.event === 'complete') finalResult = eventData;
+    } catch (e) {}
+  }
+
+  return finalResult;
+}
+
 
 // Chatbot endpoints
 export async function fetchChatSuggestions(baseUrl = DEFAULT_CHATBOT_URL, apiKey = DEFAULT_RAG_TOKEN, limit = 4) {
