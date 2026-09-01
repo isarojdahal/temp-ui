@@ -216,23 +216,23 @@ export function FloatingChatDrawer({
       </div>
 
       {/* Messages Stream Container */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 text-xs bg-slate-50/50">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs sm:text-[13px] bg-slate-50/50">
         {messages.map((msg) => {
           const isUser = msg.role === 'user';
           return (
             <div
               key={msg.id}
-              className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
             >
               <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white shadow-sm ${isUser ? 'bg-[#208661]' : 'bg-slate-200'
+                className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center shrink-0 text-white shadow-sm ${isUser ? 'bg-[#208661]' : 'bg-slate-200'
                   }`}
               >
                 {isUser ? <User size={14} /> : <Bot size={14} className="text-[#208661]" />}
               </div>
 
               <div
-                className={`max-w-[85%] rounded-2xl p-3 space-y-1.5 shadow-sm border ${isUser
+                className={`max-w-[85%] rounded-2xl p-4 space-y-2 shadow-sm border ${isUser
                   ? 'bg-[#208661] border-[#208661] text-white rounded-tr-none shadow-sm'
                   : 'bg-white border-slate-200 text-slate-800 rounded-tl-none'
                   }`}
@@ -284,7 +284,7 @@ export function FloatingChatDrawer({
           e.preventDefault();
           handleSend();
         }}
-        className="p-3 border-t border-slate-200 bg-white flex gap-2"
+        className="p-4 border-t border-slate-200 bg-white flex gap-2.5 items-center"
       >
         <input
           type="text"
@@ -292,16 +292,16 @@ export function FloatingChatDrawer({
           onChange={(e) => setInputQuery(e.target.value)}
           placeholder="Ask Climate AI Assistant..."
           disabled={isStreaming}
-          className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#208661]"
+          className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 min-h-[48px] text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#208661]/20 focus:border-[#208661] focus:bg-white shadow-2xs"
         />
         <Button
           type="submit"
           variant="gradient"
           size="sm"
           disabled={isStreaming || !inputQuery.trim()}
-          className="px-3 bg-[#208661] hover:bg-[#1a6d4f] text-white"
+          className="px-4 h-12 rounded-xl bg-[#208661] hover:bg-[#1a6d4f] text-white flex items-center justify-center cursor-pointer shadow-xs"
         >
-          {isStreaming ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+          {isStreaming ? <RefreshCw size={15} className="animate-spin" /> : <Send size={15} />}
         </Button>
       </form>
     </div>

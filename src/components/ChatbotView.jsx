@@ -464,7 +464,7 @@ export function ChatbotView({ chatbotUrl, chatbotOnline, apiKey, setApiKey }) {
         </div>
 
         {/* Message Feed */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 w-full">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-6 w-full">
           {/* Welcome Prompt Chips */}
           {activeMessages.length <= 2 && suggestions.length > 0 && (
             <div className="my-4 card-rich p-5 space-y-3.5 border-slate-200 shadow-xs">
@@ -610,7 +610,7 @@ export function ChatbotView({ chatbotUrl, chatbotOnline, apiKey, setApiKey }) {
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 sm:p-5 border-t border-slate-200 bg-white shrink-0 shadow-xs">
+        <div className="p-5 sm:p-6 border-t border-slate-200 bg-white shrink-0 shadow-xs">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -624,14 +624,14 @@ export function ChatbotView({ chatbotUrl, chatbotOnline, apiKey, setApiKey }) {
               onChange={(e) => setInputQuery(e.target.value)}
               placeholder="Ask Drishti AI about climate hazards, vulnerability metrics, framework rules..."
               disabled={isStreaming}
-              className="input-rich flex-1 text-xs sm:text-sm py-3.5 px-5 rounded-full border-slate-300 focus:border-[#208661] shadow-xs"
+              className="input-rich flex-1 text-xs sm:text-sm py-4 px-6 min-h-[52px] rounded-full border-slate-300 focus:border-[#208661] shadow-xs"
             />
             <Button
               type="submit"
               variant="gradient"
               size="default"
               disabled={isStreaming || !inputQuery.trim()}
-              className="rounded-full px-6 h-11 bg-[#208661] hover:bg-[#1a6d4f] text-white shadow-xs shrink-0"
+              className="rounded-full px-7 h-12 bg-[#208661] hover:bg-[#1a6d4f] text-white shadow-xs shrink-0 cursor-pointer"
             >
               {isStreaming ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
             </Button>
