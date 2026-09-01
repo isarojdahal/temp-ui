@@ -499,40 +499,262 @@ body,
   background: #ffffff;
 }
 
-/* Markdown formatting */
-.markdown-content p {
-  margin-bottom: 8px;
-  line-height: 1.6;
+/* ==========================================================================
+   ENHANCED MARKDOWN RENDERING FOR CHAT (MCDA, COPILOT & CHATBOT)
+   ========================================================================== */
+
+.markdown-content,
+.chat-markdown {
+  font-size: 0.8125rem;
+  line-height: 1.625;
+  color: inherit;
+  word-break: break-word;
+}
+
+/* Headings */
+.markdown-content h1,
+.chat-markdown h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0.875rem;
+  margin-bottom: 0.375rem;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.markdown-content h2,
+.chat-markdown h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.markdown-content h3,
+.chat-markdown h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: 0.625rem;
+  margin-bottom: 0.25rem;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.markdown-content h4,
+.chat-markdown h4,
+.markdown-content h5,
+.chat-markdown h5 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
   color: #334155;
 }
 
-.markdown-content p:last-child {
+/* Paragraphs */
+.markdown-content p,
+.chat-markdown p {
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.markdown-content p:first-child,
+.chat-markdown p:first-child {
+  margin-top: 0;
+}
+
+.markdown-content p:last-child,
+.chat-markdown p:last-child {
   margin-bottom: 0;
 }
 
-.markdown-content ul,
-.markdown-content ol {
-  margin-left: 18px;
-  margin-bottom: 8px;
+/* Strong / Emphasis */
+.markdown-content strong,
+.chat-markdown strong,
+.markdown-content b,
+.chat-markdown b {
+  font-weight: 600;
+  color: #0f172a;
 }
 
-.markdown-content code {
-  background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: #0284c7;
+/* In user messages with white text */
+.text-white .markdown-content strong,
+.text-white .chat-markdown strong,
+.text-white .markdown-content b,
+.text-white .chat-markdown b,
+.text-white .markdown-content h1,
+.text-white .chat-markdown h1,
+.text-white .markdown-content h2,
+.text-white .chat-markdown h2,
+.text-white .markdown-content h3,
+.text-white .chat-markdown h3 {
+  color: #ffffff !important;
+}
+
+/* Lists */
+.markdown-content ul,
+.chat-markdown ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content ol,
+.chat-markdown ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content li,
+.chat-markdown li {
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+  line-height: 1.55;
+}
+
+.markdown-content li::marker,
+.chat-markdown li::marker {
+  color: #208661;
+}
+
+.text-white .markdown-content li::marker,
+.text-white .chat-markdown li::marker {
+  color: #ffffff;
+}
+
+/* Nested lists */
+.markdown-content li>ul,
+.chat-markdown li>ul,
+.markdown-content li>ol,
+.chat-markdown li>ol {
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+/* Code & Pre */
+.markdown-content code,
+.chat-markdown code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.375rem;
+  background-color: #f1f5f9;
+  color: #0f766e;
   border: 1px solid #e2e8f0;
 }
 
-.markdown-content pre {
-  background: #f8fafc;
-  border: 1px solid var(--border-subtle);
-  padding: 12px;
-  border-radius: 8px;
+.text-white .markdown-content code,
+.text-white .chat-markdown code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.markdown-content pre,
+.chat-markdown pre {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.625rem;
   overflow-x: auto;
-  margin: 10px 0;
+  margin-top: 0.625rem;
+  margin-bottom: 0.625rem;
+  border: 1px solid #1e293b;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.markdown-content pre code,
+.chat-markdown pre code {
+  background-color: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border: none !important;
+  font-size: inherit;
+}
+
+/* Blockquotes */
+.markdown-content blockquote,
+.chat-markdown blockquote {
+  border-left: 3px solid #208661;
+  background-color: rgba(32, 134, 97, 0.05);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #475569;
+  font-style: italic;
+}
+
+/* Tables (GFM) */
+.markdown-content table,
+.chat-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.625rem;
+  margin-bottom: 0.625rem;
+  font-size: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  display: table;
+}
+
+.markdown-content th,
+.chat-markdown th {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.markdown-content td,
+.chat-markdown td {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.markdown-content tr:nth-child(even) td,
+.chat-markdown tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
+
+.markdown-content tr:hover td,
+.chat-markdown tr:hover td {
+  background-color: #f1f5f9;
+}
+
+/* Horizontal Rule */
+.markdown-content hr,
+.chat-markdown hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Links */
+.markdown-content a,
+.chat-markdown a {
+  color: #208661;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.markdown-content a:hover,
+.chat-markdown a:hover {
+  color: #166534;
 }
 
 /* React Flow Controls */

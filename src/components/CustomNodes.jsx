@@ -37,12 +37,6 @@ export const CriteriaNode = memo(({ data }) => {
         {isRoot ? 'Goal / Root Assessment' : `Level ${data.depth || 1} Criteria`}
       </span>
 
-      {data.formula && (
-        <div className="mt-2 p-1.5 rounded-lg bg-white/80 border border-slate-200/80 text-[10px] font-mono text-[#208661] font-semibold shadow-xs">
-          Formula: {data.formula}
-        </div>
-      )}
-
       <Handle
         type="source"
         position={Position.Right}
@@ -86,24 +80,6 @@ export const QuestionNode = memo(({ data }) => (
     <span className="text-[10px] font-semibold text-slate-500 block">
       {data.depth === 4 ? 'Survey Column Name' : 'Survey Question Indicator'}
     </span>
-
-    {data.formula && (
-      <div className="mt-2 p-1.5 rounded-lg bg-white/80 border border-slate-200/80 text-[10px] font-mono text-[#208661] font-semibold shadow-xs">
-        Mapped Column: {data.formula}
-      </div>
-    )}
-
-    {data.choices && data.choices.length > 0 && (
-      <div className="mt-2 space-y-1 text-[10px] bg-white/80 p-1.5 rounded-lg border border-slate-200">
-        <span className="text-[9px] text-slate-500 uppercase tracking-wider block font-bold">Choice Score Mapping:</span>
-        {data.choices.map((c, i) => (
-          <div key={i} className="flex justify-between px-1 py-0.5 rounded text-slate-700 font-medium">
-            <span>{c.name}</span>
-            <span className="font-mono text-[#208661] font-bold">{c.score}</span>
-          </div>
-        ))}
-      </div>
-    )}
 
     {data.depth !== 4 && (
       <Handle

@@ -7,6 +7,8 @@ import {
   ControlButton,
   Background,
   MiniMap,
+  NodeToolbar,
+  Position,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -18,16 +20,17 @@ import {
   Play,
   RefreshCw,
   FileSpreadsheet,
-  Info,
   AlertCircle,
   Download,
   Copy,
-  Code,
   Sparkles,
   Wand2,
   Eye,
   EyeOff,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Pencil,
+  Settings2,
+  X
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -49,6 +52,9 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [prompt, setPrompt] = useState('Flood Risk & Vulnerability Assessment');
   const [facilityType, setFacilityType] = useState('health_facility');
   const [assessmentType, setAssessmentType] = useState('flood');
+  const [assessmentId, setAssessmentId] = useState('asm-default');
+  const [userId, setUserId] = useState('user-1');
+  const [currentDomain, setCurrentDomain] = useState('pokhara.dastaa.org');
   const [surveyColumnsText, setSurveyColumnsText] = useState(
     JSON.stringify([
       {
@@ -72,11 +78,24 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [domain, setDomain] = useState('health_facility');
   const [rawTreeData, setRawTreeData] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [showRawJson, setShowRawJson] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [isExportingPng, setIsExportingPng] = useState(false);
+  const [activeNodeModal, setActiveNodeModal] = useState(null); // null | 'formula' | 'choices'
 
   const { fitView } = useReactFlow();
+
+  // Close any open node-detail viewer whenever the selected node changes
+  // (including deselection), so a stale modal never shows another node's data.
+  useEffect(() => {
+    setActiveNodeModal(null);
+  }, [selectedNode?.id]);
+
+  // Auto-detect hostname if available in browser
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setCurrentDomain(window.location.hostname);
+    }
+  }, []);
 
   // Load registered framework templates from backend
   useEffect(() => {
@@ -118,6 +137,8 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
       completedNodes: []
     });
 
+    const activeDomain = currentDomain || ((typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'pokhara.dastaa.org');
+
     try {
       const data = await generateMcvraGraphStream(
         mcvraUrl,
@@ -127,7 +148,10 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           file,
           facilityType,
           assessmentType,
-          surveyFileColumnNames: surveyColumnsText
+          surveyFileColumnNames: surveyColumnsText,
+          assessmentId,
+          userId,
+          domain: activeDomain
         },
         (progress) => {
           setStreamProgress((prev) => {
@@ -163,7 +187,10 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           file,
           facilityType,
           assessmentType,
-          surveyFileColumnNames: surveyColumnsText
+          surveyFileColumnNames: surveyColumnsText,
+          assessmentId,
+          userId,
+          domain: activeDomain
         });
         if (fallbackData && fallbackData.graph) {
           loadTreeData(fallbackData.graph, fallbackData.domain || facilityType || 'health_facility');
@@ -344,6 +371,52 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
               </div>
             </div>
 
+            {/* Domain & Tenancy (SQLite Cache Context) */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                  Domain & Storage Context
+                </label>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-[#208661] font-semibold">
+                  SQLite Cache
+                </span>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Domain / Tenant Name</label>
+                <input
+                  type="text"
+                  value={currentDomain}
+                  onChange={(e) => setCurrentDomain(e.target.value)}
+                  placeholder="e.g. pokhara.dastaa.org"
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Assessment ID</label>
+                  <input
+                    type="text"
+                    value={assessmentId}
+                    onChange={(e) => setAssessmentId(e.target.value)}
+                    placeholder="asm-default"
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">User ID</label>
+                  <input
+                    type="text"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="user-1"
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Framework File (.xlsx / .csv)</label>
               <div className="p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:border-[#208661] transition">
@@ -520,71 +593,6 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
             <Sparkles size={14} className="animate-pulse" />
             Chat with Graph Copilot
           </Button>
-
-          {/* Node Inspector */}
-          <div className="card-rich space-y-2">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                <Info size={14} className="text-[#208661]" />
-                Node Inspector
-              </h3>
-              {selectedNode && (
-                <Button
-                  variant="link"
-                  size="xs"
-                  onClick={() => setSelectedNode(null)}
-                >
-                  Clear
-                </Button>
-              )}
-            </div>
-
-            {selectedNode ? (
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">ID:</span>
-                  <span className="font-mono text-[#208661] font-semibold">{selectedNode.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Type:</span>
-                  <span className="font-semibold text-purple-700 capitalize">{selectedNode.type}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block mb-0.5">Label:</span>
-                  <span className="font-medium text-slate-800 block bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    {selectedNode.data.label}
-                  </span>
-                </div>
-                {selectedNode.data.formula && (
-                  <div>
-                    <span className="text-slate-500 block mb-0.5">Formula:</span>
-                    <span className="font-mono text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200 block">
-                      {selectedNode.data.formula}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => setShowRawJson(!showRawJson)}
-                    className="mt-1"
-                  >
-                    <Code size={12} /> {showRawJson ? 'Hide Raw JSON' : 'View Raw Node JSON'}
-                  </Button>
-                  {showRawJson && (
-                    <pre className="bg-slate-50 p-2.5 rounded-lg text-[10px] text-emerald-700 font-mono overflow-x-auto max-h-40 border border-slate-200 mt-1">
-                      {JSON.stringify(selectedNode.data, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">
-                Click any node on the graph canvas to inspect parameters, formulas, choices and scores.
-              </p>
-            )}
-          </div>
         </div>
       </div>
 
@@ -601,15 +609,36 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           fitView
         >
           <Background color="#cbd5e1" gap={20} size={1} />
+
+          {/* Contextual Selected-Node Toolbar (view-only Formula / Choice Scores actions) */}
+          <NodeToolbar
+            nodeId={selectedNode?.id}
+            isVisible={!!selectedNode}
+            position={Position.Top}
+            offset={12}
+            className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 shadow-lg p-1"
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveNodeModal('formula')}
+              title="View Formula"
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveNodeModal('choices')}
+              title="View Choice Scores"
+            >
+              <Settings2 size={14} />
+            </Button>
+          </NodeToolbar>
+
           <Controls className="react-flow-controls">
             <ControlButton title="Beautify / Auto Layout" onClick={handleBeautify}>
               <Wand2 size={15} className="text-[#208661]" />
-            </ControlButton>
-            <ControlButton
-              title="Chat with MCVRA Graph AI"
-              onClick={() => setIsChatOpen((prev) => !prev)}
-            >
-              <Sparkles size={15} className="text-[#208661]" />
             </ControlButton>
             <ControlButton
               title={showMiniMap ? 'Hide MiniMap' : 'Show MiniMap'}
@@ -647,6 +676,24 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           )}
         </ReactFlow>
 
+        {/* Top-Left Canvas Context Card (Domain info + Node Legend, consolidated) */}
+        <div className="absolute top-4 left-4 z-20 hidden sm:flex flex-col gap-2 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-sm px-3.5 py-2 rounded-xl text-xs text-slate-700">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#208661]" />
+            <span className="font-semibold text-slate-500">Domain:</span>
+            <span className="font-mono text-[#208661] font-bold">{currentDomain || 'pokhara.dastaa.org'}</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-slate-500 font-mono text-[11px]">{assessmentId}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t border-slate-100">
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#E9F3F0] border border-[#208661]" /> Goal / Criteria</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FFF8EC] border border-amber-400" /> Metric</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F5F5F5] border border-slate-400" /> Question</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FEF3C7] border border-amber-500" /> Raster Calc</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F1CBCB] border border-rose-400" /> Raster</div>
+          </div>
+        </div>
+
         {/* Floating Chat with Graph AI Button on Canvas */}
         <button
           onClick={() => setIsChatOpen(true)}
@@ -657,15 +704,6 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           <Sparkles size={14} className="text-[#208661] group-hover:rotate-12 transition-transform" />
           <span>Chat with Graph AI</span>
         </button>
-
-        {/* Legend Card - integrated-tool-frontend color palette */}
-        <div className="absolute bottom-5 right-5 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-xl flex gap-3 text-xs text-slate-700 shadow-md z-10">
-          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#E9F3F0] border border-[#208661]" /> Goal / Criteria</div>
-          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FFF8EC] border border-amber-400" /> Metric</div>
-          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F5F5F5] border border-slate-400" /> Question</div>
-          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FEF3C7] border border-amber-500" /> Raster Calc</div>
-          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F1CBCB] border border-rose-400" /> Raster</div>
-        </div>
       </div>
 
       {/* MCVRA Graph AI Copilot Drawer */}
@@ -674,11 +712,98 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         onClose={() => setIsChatOpen(false)}
         mcvraUrl={mcvraUrl}
         rawTreeData={rawTreeData || sampleMCVRATree}
+        assessmentId={assessmentId}
+        userId={userId}
         assessmentName={prompt}
-        domain={domain}
+        domain={currentDomain || domain}
         onApplyUpdatedGraph={handleApplyUpdatedGraph}
         onFitView={() => fitView({ padding: 0.2 })}
       />
+
+      {/* Formula Viewer Modal (read-only) */}
+      {activeNodeModal === 'formula' && selectedNode && (
+        <div className="pdf-modal-backdrop" onClick={() => setActiveNodeModal(null)}>
+          <div className="card-rich w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Pencil size={14} className="text-[#208661]" />
+                Formula
+              </h3>
+              <button
+                onClick={() => setActiveNodeModal(null)}
+                className="pdf-close-btn"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="text-xs space-y-2 max-h-[60vh] overflow-y-auto">
+              <span className="text-slate-500 block font-medium">{selectedNode.data.label}</span>
+
+              {selectedNode.data.formula ? (
+                <pre className="font-mono text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200 whitespace-pre-wrap break-words">
+                  {selectedNode.data.formula}
+                </pre>
+              ) : (
+                <p className="text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">
+                  No formula configured for this node.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Choice Scores Viewer Modal (read-only) */}
+      {activeNodeModal === 'choices' && selectedNode && (
+        <div className="pdf-modal-backdrop" onClick={() => setActiveNodeModal(null)}>
+          <div className="card-rich w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Settings2 size={14} className="text-[#208661]" />
+                Choice Scores
+              </h3>
+              <button
+                onClick={() => setActiveNodeModal(null)}
+                className="pdf-close-btn"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="text-xs space-y-2">
+              <span className="text-slate-500 block font-medium">{selectedNode.data.label}</span>
+
+              {selectedNode.data.choices && selectedNode.data.choices.length > 0 ? (
+                <div className="rounded-lg border border-slate-200 overflow-hidden max-h-[50vh] overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 sticky top-0">
+                      <tr>
+                        <th className="text-left font-semibold text-slate-600 px-3 py-2">Choice</th>
+                        <th className="text-right font-semibold text-slate-600 px-3 py-2">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedNode.data.choices.map((choice, idx) => (
+                        <tr key={idx} className="border-t border-slate-100">
+                          <td className="px-3 py-2 text-slate-800 font-medium">{choice.name}</td>
+                          <td className="px-3 py-2 text-right font-mono text-[#208661] font-bold">{choice.score}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">
+                  No choice scores configured for this node.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

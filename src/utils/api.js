@@ -34,7 +34,10 @@ export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   }
 }
 
-export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames }) {
+export async function generateMcvraGraph(
+  baseUrl = DEFAULT_MCVRA_URL,
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId }
+) {
   const formData = new FormData();
   if (file) formData.append('file', file);
   if (prompt) formData.append('prompt', prompt);
@@ -86,19 +89,20 @@ export async function generateMcvraGraph(baseUrl = DEFAULT_MCVRA_URL, { prompt, 
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  const res = await axios.post(
-    `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`,
-    formData,
-    {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }
-  );
+  let url = `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
+  if (domain) url += `&domain=${encodeURIComponent(domain)}`;
+  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
+
+  const res = await axios.post(url, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return res.data;
 }
 
 export async function generateMcvraGraphStream(
   baseUrl = DEFAULT_MCVRA_URL,
-  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames },
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId },
   onProgress
 ) {
   const formData = new FormData();
@@ -152,7 +156,10 @@ export async function generateMcvraGraphStream(
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  const url = `${baseUrl}/generate-mcvra?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  let url = `${baseUrl}/generate-mcvra?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
+  if (domain) url += `&domain=${encodeURIComponent(domain)}`;
+  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -224,22 +231,109 @@ export async function generateMcvraGraphStream(
 
 export async function chatWithMcvra(
   baseUrl = DEFAULT_MCVRA_URL,
-  { message, graph, assessmentName, domain, history, layoutOptions }
+  { message, graph, assessmentId, userId, assessmentName, domain, history, layoutOptions }
 ) {
   const payload = {
     message,
-    graph: Array.isArray(graph) ? graph : (graph ? [graph] : []),
-    assessment_name: assessmentName,
+    assessment_id: assessmentId || undefined,
+    user_id: userId || undefined,
     domain: domain || 'health_facility',
+    assessment_name: assessmentName,
     history: history || [],
     layout_options: layoutOptions || null,
   };
+
+  if (graph) {
+    payload.graph = Array.isArray(graph) ? graph : [graph];
+  }
 
   const res = await axios.post(`${baseUrl}/chat-with-mcvra`, payload, {
     headers: { 'Content-Type': 'application/json' },
     timeout: 60000,
   });
   return res.data;
+}
+
+export async function chatWithMcvraStream(
+  baseUrl = DEFAULT_MCVRA_URL,
+  { message, graph, assessmentId, userId, assessmentName, domain, history, layoutOptions },
+  onChunk
+) {
+  const payload = {
+    message,
+    assessment_id: assessmentId || undefined,
+    user_id: userId || undefined,
+    domain: domain || 'health_facility',
+    assessment_name: assessmentName,
+    history: history || [],
+    layout_options: layoutOptions || null,
+    stream: true,
+  };
+
+  if (graph) {
+    payload.graph = Array.isArray(graph) ? graph : [graph];
+  }
+
+  const response = await fetch(`${baseUrl}/chat-with-mcvra?stream=true`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`MCVRA chat streaming failed (${response.status}): ${errText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let finalResult = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data:')) continue;
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr) continue;
+
+      try {
+        const eventData = JSON.parse(jsonStr);
+        if (eventData.event === 'chunk') {
+          if (onChunk) onChunk(eventData.delta, eventData);
+        } else if (eventData.event === 'start') {
+          if (onChunk) onChunk('', eventData);
+        } else if (eventData.event === 'complete') {
+          finalResult = eventData;
+          if (onChunk) onChunk('', eventData);
+        } else if (eventData.event === 'error') {
+          throw new Error(eventData.detail || 'Chat streaming error');
+        }
+      } catch (err) {
+        if (err.message && err.message.includes('Chat streaming error')) throw err;
+        console.warn('Error parsing SSE chunk:', err);
+      }
+    }
+  }
+
+  if (buffer.trim().startsWith('data:')) {
+    try {
+      const eventData = JSON.parse(buffer.trim().slice(5).trim());
+      if (eventData.event === 'complete') finalResult = eventData;
+    } catch (e) {}
+  }
+
+  return finalResult;
 }
 
 
