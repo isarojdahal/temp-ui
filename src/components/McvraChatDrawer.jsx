@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Send,
   Sparkles,
@@ -279,10 +280,10 @@ I can interact directly with your current assessment graph. Try asking me to:
                     : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs'
                     }`}
                 >
-                  <div className="prose prose-xs max-w-none text-inherit prose-headings:text-inherit prose-headings:font-bold prose-headings:mb-1.5 prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-pre:p-2 prose-pre:rounded-lg prose-table:text-xs">
+                  <div className="chat-markdown">
                     {msg.content ? (
                       <>
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                         {msg.isStreaming && (
                           <span className="inline-block w-1.5 h-3.5 bg-[#208661] ml-0.5 animate-pulse rounded-xs align-middle" />
                         )}

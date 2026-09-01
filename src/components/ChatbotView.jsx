@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Send,
   Sparkles,
@@ -516,7 +517,7 @@ export function ChatbotView({ chatbotUrl, chatbotOnline, apiKey, setApiKey }) {
                   }`}>
                   {msg.role === 'assistant' ? (
                     <div className="markdown-content">
-                      <ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
@@ -596,7 +597,7 @@ export function ChatbotView({ chatbotUrl, chatbotOnline, apiKey, setApiKey }) {
                 </div>
                 <div className="p-4 sm:p-5 rounded-2xl text-xs sm:text-sm leading-relaxed bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-xs">
                   <div className="markdown-content">
-                    <ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {currentStreamMessage.content || '...'}
                     </ReactMarkdown>
                   </div>

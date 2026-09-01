@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Send,
   Sparkles,
@@ -236,9 +237,9 @@ export function FloatingChatDrawer({
                   : 'bg-white border-slate-200 text-slate-800 rounded-tl-none'
                   }`}
               >
-                <div className={`prose ${isUser ? 'prose-invert' : ''} prose-xs max-w-none break-words`}>
+                <div className="chat-markdown break-words">
                   {msg.content ? (
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   ) : (
                     <div className="flex items-center gap-2 text-slate-500 py-1 font-mono text-[11px]">
                       <RefreshCw size={12} className="animate-spin text-[#208661]" />
