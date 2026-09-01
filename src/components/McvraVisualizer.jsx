@@ -132,8 +132,9 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         (progress) => {
           setStreamProgress((prev) => {
             const completed = prev?.completedNodes ? [...prev.completedNodes] : [];
-            if (progress.node && !completed.includes(progress.node)) {
-              completed.push(progress.node);
+            const doneNode = progress.completed_node || (progress.event === 'progress' && progress.node);
+            if (doneNode && !completed.includes(doneNode)) {
+              completed.push(doneNode);
             }
             return {
               step: progress.step || prev?.step || 1,
@@ -141,6 +142,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
               title: progress.title || 'Processing Graph Node',
               description: progress.description || progress.message || 'Executing LangGraph agent...',
               completedNodes: completed,
+              currentNode: progress.current_node || (completed.length === 0 ? 'select_framework_and_generate_components' : null),
             };
           });
         }
@@ -148,6 +150,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
 
       if (data && data.graph) {
         loadTreeData(data.graph, data.domain || facilityType || 'health_facility');
+        setDomain(data.domain || facilityType || 'health_facility');
       } else {
         throw new Error('Invalid graph payload returned from MCVRA generator.');
       }
@@ -164,6 +167,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         });
         if (fallbackData && fallbackData.graph) {
           loadTreeData(fallbackData.graph, fallbackData.domain || facilityType || 'health_facility');
+          setDomain(fallbackData.domain || facilityType || 'health_facility');
         } else {
           throw new Error('Invalid graph payload returned from MCVRA generator fallback.');
         }
@@ -179,7 +183,9 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
       }
     } finally {
       setLoading(false);
-      setStreamProgress(null);
+      setTimeout(() => {
+        setStreamProgress(null);
+      }, 1800);
     }
   };
 
@@ -431,7 +437,10 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
                   { key: "calculate_usage_metadata", label: "Usage & Pricing Agent" },
                 ].map((agent, idx) => {
                   const isDone = streamProgress.completedNodes?.includes(agent.key);
-                  const isCurrent = streamProgress.step === idx + 1;
+                  const isCurrent = !isDone && (
+                    streamProgress.currentNode === agent.key ||
+                    (!streamProgress.currentNode && streamProgress.step === idx + 1)
+                  );
                   return (
                     <div key={agent.key} className="flex items-center justify-between text-[10px]">
                       <span className={`flex items-center gap-1.5 ${isDone ? 'text-emerald-800 font-semibold' : isCurrent ? 'text-slate-900 font-bold' : 'text-slate-400'}`}>
@@ -459,7 +468,9 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           <div className="card-rich space-y-2">
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500">Predicted Domain:</span>
-              <span className="font-bold text-[#208661] capitalize">{domain.replace(/_/g, ' ')}</span>
+              <span className="font-bold text-[#208661] capitalize">
+                {(domain || facilityType || 'health_facility').replace(/_/g, ' ')}
+              </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500">Total Graph Nodes:</span>

@@ -152,10 +152,13 @@ export async function generateMcvraGraphStream(
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  const url = `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  const url = `${baseUrl}/generate-mcvra?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
 
   const response = await fetch(url, {
     method: 'POST',
+    headers: {
+      'Accept': 'text/event-stream',
+    },
     body: formData,
   });
 
