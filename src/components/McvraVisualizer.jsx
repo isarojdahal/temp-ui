@@ -51,6 +51,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [assessmentType, setAssessmentType] = useState('flood');
   const [assessmentId, setAssessmentId] = useState('asm-default');
   const [userId, setUserId] = useState('user-1');
+  const [currentDomain, setCurrentDomain] = useState('pokhara.dastaa.org');
   const [surveyColumnsText, setSurveyColumnsText] = useState(
     JSON.stringify([
       {
@@ -79,6 +80,13 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [isExportingPng, setIsExportingPng] = useState(false);
 
   const { fitView } = useReactFlow();
+
+  // Auto-detect hostname if available in browser
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setCurrentDomain(window.location.hostname);
+    }
+  }, []);
 
   // Load registered framework templates from backend
   useEffect(() => {
@@ -120,8 +128,9 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
       completedNodes: []
     });
 
+    const activeDomain = currentDomain || ((typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'pokhara.dastaa.org');
+
     try {
-      const currentDomain = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'pokhara.dastaa.org';
       const data = await generateMcvraGraphStream(
         mcvraUrl,
         {
@@ -133,7 +142,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           surveyFileColumnNames: surveyColumnsText,
           assessmentId,
           userId,
-          domain: currentDomain
+          domain: activeDomain
         },
         (progress) => {
           setStreamProgress((prev) => {
@@ -172,7 +181,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           surveyFileColumnNames: surveyColumnsText,
           assessmentId,
           userId,
-          domain: currentDomain
+          domain: activeDomain
         });
         if (fallbackData && fallbackData.graph) {
           loadTreeData(fallbackData.graph, fallbackData.domain || facilityType || 'health_facility');
@@ -350,6 +359,52 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
                   <option value="drought">Drought</option>
                   <option value="landslide">Landslides</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Domain & Tenancy (SQLite Cache Context) */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                  Domain & Storage Context
+                </label>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-[#208661] font-semibold">
+                  SQLite Cache
+                </span>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Domain / Tenant Name</label>
+                <input
+                  type="text"
+                  value={currentDomain}
+                  onChange={(e) => setCurrentDomain(e.target.value)}
+                  placeholder="e.g. pokhara.dastaa.org"
+                  className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Assessment ID</label>
+                  <input
+                    type="text"
+                    value={assessmentId}
+                    onChange={(e) => setAssessmentId(e.target.value)}
+                    placeholder="asm-default"
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">User ID</label>
+                  <input
+                    type="text"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="user-1"
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -656,6 +711,15 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           )}
         </ReactFlow>
 
+        {/* Top-Left Canvas Context Pill */}
+        <div className="absolute top-4 left-4 z-20 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-sm px-3.5 py-1.5 rounded-full text-xs text-slate-700">
+          <span className="w-2 h-2 rounded-full bg-[#208661]" />
+          <span className="font-semibold text-slate-500">Domain:</span>
+          <span className="font-mono text-[#208661] font-bold">{currentDomain || 'pokhara.dastaa.org'}</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-slate-500 font-mono text-[11px]">{assessmentId}</span>
+        </div>
+
         {/* Floating Chat with Graph AI Button on Canvas */}
         <button
           onClick={() => setIsChatOpen(true)}
@@ -686,7 +750,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         assessmentId={assessmentId}
         userId={userId}
         assessmentName={prompt}
-        domain={domain}
+        domain={currentDomain || domain}
         onApplyUpdatedGraph={handleApplyUpdatedGraph}
         onFitView={() => fitView({ padding: 0.2 })}
       />
