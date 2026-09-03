@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -18,6 +18,7 @@ import '@xyflow/react/dist/style.css';
 import {
   Layers,
   Play,
+  Square,
   RefreshCw,
   FileSpreadsheet,
   AlertCircle,
@@ -81,8 +82,24 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [activeNodeModal, setActiveNodeModal] = useState(null); // null | 'formula' | 'choices'
+  const abortControllerRef = useRef(null);
 
   const { fitView } = useReactFlow();
+
+  // Handle stopping/canceling active graph generation
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      try {
+        abortControllerRef.current.abort();
+      } catch (e) {
+        // ignore abort error
+      }
+      abortControllerRef.current = null;
+    }
+    setLoading(false);
+    setStreamProgress(null);
+    setError('Generation stopped by user.');
+  }, []);
 
   // Close any open node-detail viewer whenever the selected node changes
   // (including deselection), so a stale modal never shows another node's data.
@@ -127,6 +144,12 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
 
   const handleGenerate = async (e) => {
     e?.preventDefault();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setLoading(true);
     setError(null);
     setStreamProgress({
@@ -151,7 +174,8 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           surveyFileColumnNames: surveyColumnsText,
           assessmentId,
           userId,
-          domain: activeDomain
+          domain: activeDomain,
+          signal: abortController.signal
         },
         (progress) => {
           setStreamProgress((prev) => {
@@ -179,6 +203,12 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         throw new Error('Invalid graph payload returned from MCVRA generator.');
       }
     } catch (err) {
+      if (abortController.signal.aborted || err.name === 'AbortError' || err.message?.includes('Aborted')) {
+        setLoading(false);
+        setStreamProgress(null);
+        setError('Generation stopped by user.');
+        return;
+      }
       console.error('MCVRA streaming generation error, attempting synchronous fallback:', err);
       try {
         const fallbackData = await generateMcvraGraph(mcvraUrl, {
@@ -190,7 +220,8 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           surveyFileColumnNames: surveyColumnsText,
           assessmentId,
           userId,
-          domain: activeDomain
+          domain: activeDomain,
+          signal: abortController.signal
         });
         if (fallbackData && fallbackData.graph) {
           loadTreeData(fallbackData.graph, fallbackData.domain || facilityType || 'health_facility');
@@ -199,6 +230,12 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
           throw new Error('Invalid graph payload returned from MCVRA generator fallback.');
         }
       } catch (fallbackErr) {
+        if (abortController.signal.aborted || fallbackErr.name === 'AbortError' || fallbackErr.message?.includes('Aborted')) {
+          setLoading(false);
+          setStreamProgress(null);
+          setError('Generation stopped by user.');
+          return;
+        }
         let detailMsg = 'Failed to generate graph from backend.';
         if (fallbackErr.response?.data?.detail) {
           const detail = fallbackErr.response.data.detail;
@@ -209,6 +246,9 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
         setError(detailMsg);
       }
     } finally {
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
       setTimeout(() => {
         setStreamProgress(null);
@@ -462,11 +502,24 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
                 variant="gradient"
                 size="sm"
                 disabled={loading}
-                className="flex-1 bg-[#208661] hover:bg-[#1a6d4f] text-white"
+                className="flex-1 bg-[#208661] hover:bg-[#1a6d4f] text-white font-medium"
               >
                 {loading ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
-                Generate Graph
+                {loading ? 'Generating...' : 'Generate Graph'}
               </Button>
+              {loading && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleStop}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300 font-semibold flex items-center gap-1.5 transition px-3 shadow-2xs"
+                  title="Stop generation"
+                >
+                  <Square size={12} className="fill-rose-600 text-rose-600" />
+                  Stop
+                </Button>
+              )}
             </div>
           </form>
 
@@ -477,9 +530,20 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
                   <Sparkles size={14} className="text-[#208661] animate-pulse" />
                   LangGraph Pipeline Active
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#208661] text-white">
-                  Step {streamProgress.step} of {streamProgress.total_steps}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#208661] text-white">
+                    Step {streamProgress.step} of {streamProgress.total_steps}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleStop}
+                    className="px-2 py-0.5 rounded-full bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] font-bold flex items-center gap-1 transition shadow-2xs"
+                    title="Stop pipeline execution"
+                  >
+                    <Square size={8} className="fill-rose-700" />
+                    Stop
+                  </button>
+                </div>
               </div>
 
               <div className="w-full bg-emerald-200/60 rounded-full h-1.5 overflow-hidden">

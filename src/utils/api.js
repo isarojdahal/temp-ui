@@ -36,7 +36,7 @@ export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
 
 export async function generateMcvraGraph(
   baseUrl = DEFAULT_MCVRA_URL,
-  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId }
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId, signal }
 ) {
   const formData = new FormData();
   if (file) formData.append('file', file);
@@ -95,14 +95,15 @@ export async function generateMcvraGraph(
   if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
 
   const res = await axios.post(url, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    signal,
   });
   return res.data;
 }
 
 export async function generateMcvraGraphStream(
   baseUrl = DEFAULT_MCVRA_URL,
-  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId },
+  { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId, signal },
   onProgress
 ) {
   const formData = new FormData();
@@ -167,6 +168,7 @@ export async function generateMcvraGraphStream(
       'Accept': 'text/event-stream',
     },
     body: formData,
+    signal,
   });
 
   if (!response.ok) {
@@ -180,6 +182,14 @@ export async function generateMcvraGraphStream(
   let finalResult = null;
 
   while (true) {
+    if (signal?.aborted) {
+      try {
+        await reader.cancel();
+      } catch (e) {
+        // ignore cancel error
+      }
+      throw new DOMException('Aborted', 'AbortError');
+    }
     const { value, done } = await reader.read();
     if (done) break;
 
