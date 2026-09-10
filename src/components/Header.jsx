@@ -9,7 +9,8 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
-  Settings
+  Settings,
+  LayoutDashboard
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -25,6 +26,7 @@ export function Header({
 }) {
   const tabs = [
     { id: 'mcvra', label: 'MCVRA Graph Generator', icon: Layers },
+    { id: 'scorecard', label: 'Scorecard Editor', icon: LayoutDashboard },
     { id: 'chatbot', label: 'Climate AI Assistant', icon: MessageSquareText },
     { id: 'documents', label: 'Knowledge Base', icon: FileText },
     { id: 'dashboard', label: 'API Diagnostics', icon: Activity }

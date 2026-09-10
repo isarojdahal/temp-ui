@@ -42,6 +42,12 @@ export function FloatingChatDrawer({
   const [suggestions, setSuggestions] = useState([]);
   const [activeSources, setActiveSources] = useState({});
   const messagesEndRef = useRef(null);
+  const messageSequenceRef = useRef(0);
+
+  const nextMessageId = (prefix) => {
+    messageSequenceRef.current += 1;
+    return `${prefix}-${messageSequenceRef.current}`;
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,9 +63,9 @@ export function FloatingChatDrawer({
   useEffect(() => {
     async function loadSuggestions() {
       if (chatbotOnline) {
-        const list = await fetchChatSuggestions(chatbotUrl, apiKey);
-        if (list && list.length > 0) {
-          setSuggestions(list);
+        const result = await fetchChatSuggestions(chatbotUrl, apiKey);
+        if (result.suggestions.length > 0) {
+          setSuggestions(result.suggestions);
         }
       }
     }
@@ -71,7 +77,7 @@ export function FloatingChatDrawer({
     if (!textToSend || !textToSend.trim() || isStreaming) return;
 
     const userMessage = {
-      id: `user-${Date.now()}`,
+      id: nextMessageId('user'),
       role: 'user',
       content: textToSend.trim(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -81,7 +87,7 @@ export function FloatingChatDrawer({
     if (!queryText) setInputQuery('');
     setIsStreaming(true);
 
-    const assistantMsgId = `assistant-${Date.now()}`;
+    const assistantMsgId = nextMessageId('assistant');
     const initialAssistantMsg = {
       id: assistantMsgId,
       role: 'assistant',
@@ -97,34 +103,42 @@ export function FloatingChatDrawer({
 
     try {
       await sendChatStream(
-        chatbotUrl,
         {
-          message: textToSend,
-          chat_history: messages.map((m) => ({ role: m.role, content: m.content }))
-        },
-        apiKey,
-        (token) => {
-          accumulatedContent += token;
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMsgId
-                ? { ...msg, content: accumulatedContent }
-                : msg
-            )
-          );
-        },
-        (sourcesData) => {
-          if (Array.isArray(sourcesData)) {
-            accumulatedSources = sourcesData;
+          baseUrl: chatbotUrl,
+          apiKey,
+          query: textToSend.trim(),
+          conversationId: 'floating-chat',
+          messagesHistory: messages.map((m) => ({ role: m.role, content: m.content })),
+          isChatMode: true,
+          onChunk: (chunkText) => {
+            accumulatedContent += chunkText;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMsgId ? { ...msg, content: accumulatedContent } : msg
+              )
+            );
+          },
+          onMetadata: (metadata) => {
+            if (Array.isArray(metadata?.sources)) {
+              accumulatedSources = metadata.sources;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId ? { ...msg, sources: accumulatedSources } : msg
+                )
+              );
+            }
+          },
+          onError: (message) => {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantMsgId
-                  ? { ...msg, sources: sourcesData }
+                  ? { ...msg, content: accumulatedContent || `Failed to connect: ${message}` }
                   : msg
               )
             );
-          }
-        }
+          },
+          onComplete: () => {}
+        },
       );
     } catch (err) {
       console.error('Drawer Chat Stream error:', err);
