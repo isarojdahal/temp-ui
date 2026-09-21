@@ -1,9 +1,10 @@
 # Drishti AI - MCVRA Visualizer & UI Dashboard
 
-This is a [Next.js](https://nextjs.org) application powering the DRISHTI-AI interactive dashboard, MCVRA (Multi-Criteria Vulnerability Risk Assessment) graph visualizer, and Climate AI Assistant.
+This is a pure [React 19](https://react.dev) single-page application powered by [Vite](https://vite.dev) and [Tailwind CSS v4](https://tailwindcss.com), hosting the DRISHTI-AI interactive dashboard, MCVRA (Multi-Criteria Vulnerability Risk Assessment) graph visualizer, Scorecard Editor, and Climate AI Assistant.
 
 ## Features
 
+- **Pure React 19 SPA Architecture**: High-performance client-side rendering with instant HMR powered by Vite and native ESM.
 - **MCVRA Risk Graph Generator**: Visualizes hierarchical risk assessment trees (Criteria, Metrics, Questions, Raster layers, and Text fields) powered by `@xyflow/react` (React Flow v12).
 - **Generation Control with Stop Button**: Allows canceling / aborting active MCVRA graph generation at any time during execution via `AbortController`, preventing unnecessary backend processing and providing immediate UI feedback.
 - **Survey Column Fields Mapping & Syntax Highlighting**: Supports custom survey dataset column configuration (JSON / CSV formats) with real-time JSON syntax color highlighting, auto Tab indentation, one-click Format JSON, and expandable tall editor to map assessment indicators dynamically against survey dataset fields.
@@ -24,22 +25,31 @@ This is a [Next.js](https://nextjs.org) application powering the DRISHTI-AI inte
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies and run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 # or
-bun dev
+npm install
+npm run dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001) with your browser to view the application.
 
+### Building for Production
+
+```bash
+pnpm build
+# Preview production build locally
+pnpm preview
+```
+
 ## Key Dependencies
 
+- `react` (^19.2.8) & `react-dom` (^19.2.8): Core React UI engine.
+- `vite` (^8.3.0) & `@vitejs/plugin-react`: Next-generation frontend tooling and bundler.
+- `@tailwindcss/vite` (^4.3.3): Tailwind CSS v4 native Vite integration.
 - `@xyflow/react` (^12.11.3): Core graph canvas engine.
 - `vega` (^6.4.0), `vega-embed` (^7.2.0), `vega-lite` (^6.4.3): High-performance declarative chart visualization engine.
 - `html-to-image` (^1.11.13): Canvas export snapshot engine.

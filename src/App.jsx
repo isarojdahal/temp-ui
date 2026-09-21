@@ -1,27 +1,25 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
-import { Header } from '../components/Header';
-import { McvraVisualizer } from '../components/McvraVisualizer';
-import { ScorecardView } from '../components/ScorecardView';
-import { ChatbotView } from '../components/ChatbotView';
-import { DocumentsView } from '../components/DocumentsView';
-import { DashboardView } from '../components/DashboardView';
-import { FloatingChatDrawer } from '../components/FloatingChatDrawer';
+import { Header } from './components/Header';
+import { McvraVisualizer } from './components/McvraVisualizer';
+import { ScorecardView } from './components/ScorecardView';
+import { ChatbotView } from './components/ChatbotView';
+import { DocumentsView } from './components/DocumentsView';
+import { DashboardView } from './components/DashboardView';
+import { FloatingChatDrawer } from './components/FloatingChatDrawer';
 import {
   DEFAULT_MCVRA_URL,
   DEFAULT_CHATBOT_URL,
   DEFAULT_RAG_TOKEN,
   checkMcvraHealth,
   checkChatbotHealth
-} from '../utils/api';
-import { Button } from '../components/ui/button';
+} from './utils/api';
+import { Button } from './components/ui/button';
 import { Sparkles } from 'lucide-react';
 
 const VALID_TABS = new Set(['mcvra', 'scorecard', 'chatbot', 'documents', 'dashboard']);
 const MCVRA_CONTEXT_STORAGE_KEY = 'drishti_mcvra_graph_context';
 
-export default function Home() {
+export default function App() {
   const [activeTab, setActiveTab] = useState('mcvra');
   const [mcvraUrl, setMcvraUrl] = useState(DEFAULT_MCVRA_URL);
   const [chatbotUrl, setChatbotUrl] = useState(DEFAULT_CHATBOT_URL);
