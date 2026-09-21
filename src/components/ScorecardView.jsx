@@ -25,6 +25,7 @@ import {
   fetchScorecardVersion,
   deleteScorecardVersions,
 } from '../utils/scorecardApi';
+import { DEFAULT_SCORECARD_URL } from '../utils/api';
 import {
   getNodeAtPath,
   deleteAtPath,
@@ -148,7 +149,10 @@ function updateDashboardScores(node, indicators, overallScore, isRoot = true) {
   };
 }
 
-export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
+export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext, scorecardUrl, scorecardOnline }) {
+  const activeScorecardUrl = scorecardUrl || DEFAULT_SCORECARD_URL;
+  const activeScorecardOnline = scorecardOnline !== undefined ? scorecardOnline : mcvraOnline;
+
   const [registry, setRegistry] = useState(null);
   const [leftTab, setLeftTab] = useState('generate'); // 'generate' | 'palette'
 
@@ -175,10 +179,10 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
   const [statusMessage, setStatusMessage] = useState(null);
 
   useEffect(() => {
-    fetchScorecardRegistry(mcvraUrl)
+    fetchScorecardRegistry(activeScorecardUrl)
       .then(setRegistry)
       .catch(() => setRegistry(null));
-  }, [mcvraUrl]);
+  }, [activeScorecardUrl]);
 
   // Pulls indicators (and the assessment context that produced them)
   // straight from the most recently generated MCVRA graph, per the paper's
@@ -230,10 +234,10 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
 
   const refreshVersions = useCallback(() => {
     if (!assessmentId) return;
-    fetchScorecardVersions(mcvraUrl, assessmentId, { domain, userId })
+    fetchScorecardVersions(activeScorecardUrl, assessmentId, { domain, userId })
       .then((res) => setVersions(res.versions || []))
       .catch(() => setVersions([]));
-  }, [mcvraUrl, assessmentId, domain, userId]);
+  }, [activeScorecardUrl, assessmentId, domain, userId]);
 
   useEffect(() => {
     refreshVersions();
@@ -359,7 +363,7 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
           unit: row.unit || null,
         })),
       };
-      const res = await generateScorecard(mcvraUrl, payload);
+      const res = await generateScorecard(activeScorecardUrl, payload);
       setDocument(res.document);
       setWarnings(res.warnings || []);
       setSelectedPath(null);
@@ -406,7 +410,7 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
     setErrors([]);
     setStatusMessage(null);
     try {
-      const res = await saveScorecard(mcvraUrl, assessmentId, {
+      const res = await saveScorecard(activeScorecardUrl, assessmentId, {
         domain,
         userId,
         document: { title: document.title, root: document.root },
@@ -429,7 +433,7 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
 
   const handleLoadVersion = async (versionId) => {
     try {
-      const res = await fetchScorecardVersion(mcvraUrl, assessmentId, versionId, { domain, userId });
+      const res = await fetchScorecardVersion(activeScorecardUrl, assessmentId, versionId, { domain, userId });
       setDocument(res.document);
       setSelectedPath(null);
       setErrors([]);
@@ -443,7 +447,7 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
     if (!assessmentId || versions.length === 0) return;
     if (!window.confirm(`Delete all ${versions.length} saved versions for this assessment?`)) return;
     try {
-      await deleteScorecardVersions(mcvraUrl, assessmentId, { domain, userId });
+      await deleteScorecardVersions(activeScorecardUrl, assessmentId, { domain, userId });
       setVersions([]);
       setStatusMessage('Saved versions cleared. Current edits remain a preview until you click Save.');
       setErrors([]);
@@ -529,14 +533,14 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
                 </div>
                 <label className="block">
                   <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Overall risk score (%)</span>
-                          <input
+                  <input
                     type="number"
                     step="0.1"
-                            min={SCORE_MIN}
-                            max={SCORE_MAX}
+                    min={SCORE_MIN}
+                    max={SCORE_MAX}
                     className="input-rich"
                     value={overallScore}
-                            onChange={(e) => updateOverallScore(e.target.value)}
+                    onChange={(e) => updateOverallScore(e.target.value)}
                   />
                 </label>
                 <label className="block">
@@ -672,11 +676,10 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext }) {
 
           {document && (
             <span
-              className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${
-                document.version_type === 'reviewed'
-                  ? 'bg-[#e9f3f0] text-[#208661] border border-[#63ab91]'
-                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-              }`}
+              className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${document.version_type === 'reviewed'
+                ? 'bg-[#e9f3f0] text-[#208661] border border-[#63ab91]'
+                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}
             >
               v{document.version} - {document.version_type}
             </span>

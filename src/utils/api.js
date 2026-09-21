@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export const DEFAULT_MCVRA_URL = 'http://localhost:8000';
+export const DEFAULT_SCORECARD_URL = 'http://localhost:8002';
 export const DEFAULT_CHATBOT_URL = 'http://localhost:8080';
 // Authentication must be supplied through the settings UI or a server-side
 // proxy. Never ship a production credential in the browser bundle.
@@ -8,6 +9,15 @@ export const DEFAULT_RAG_TOKEN = '';
 
 // Health checks
 export async function checkMcvraHealth(baseUrl = DEFAULT_MCVRA_URL) {
+  try {
+    const res = await axios.get(`${baseUrl}/health`, { timeout: 3000 });
+    return res.status === 200 && res.data?.status === 'healthy';
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function checkScorecardHealth(baseUrl = DEFAULT_SCORECARD_URL) {
   try {
     const res = await axios.get(`${baseUrl}/health`, { timeout: 3000 });
     return res.status === 200 && res.data?.status === 'healthy';

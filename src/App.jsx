@@ -8,9 +8,11 @@ import { DashboardView } from './components/DashboardView';
 import { FloatingChatDrawer } from './components/FloatingChatDrawer';
 import {
   DEFAULT_MCVRA_URL,
+  DEFAULT_SCORECARD_URL,
   DEFAULT_CHATBOT_URL,
   DEFAULT_RAG_TOKEN,
   checkMcvraHealth,
+  checkScorecardHealth,
   checkChatbotHealth
 } from './utils/api';
 import { Button } from './components/ui/button';
@@ -22,9 +24,11 @@ const MCVRA_CONTEXT_STORAGE_KEY = 'drishti_mcvra_graph_context';
 export default function App() {
   const [activeTab, setActiveTab] = useState('mcvra');
   const [mcvraUrl, setMcvraUrl] = useState(DEFAULT_MCVRA_URL);
+  const [scorecardUrl, setScorecardUrl] = useState(DEFAULT_SCORECARD_URL);
   const [chatbotUrl, setChatbotUrl] = useState(DEFAULT_CHATBOT_URL);
   const [apiKey, setApiKey] = useState(DEFAULT_RAG_TOKEN);
   const [mcvraOnline, setMcvraOnline] = useState(false);
+  const [scorecardOnline, setScorecardOnline] = useState(false);
   const [chatbotOnline, setChatbotOnline] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -74,8 +78,10 @@ export default function App() {
 
   const pollHealth = async () => {
     const mcvraStatus = await checkMcvraHealth(mcvraUrl);
+    const scorecardStatus = await checkScorecardHealth(scorecardUrl);
     const chatbotStatus = await checkChatbotHealth(chatbotUrl);
     setMcvraOnline(mcvraStatus);
+    setScorecardOnline(scorecardStatus);
     setChatbotOnline(chatbotStatus);
   };
 
@@ -83,7 +89,7 @@ export default function App() {
     pollHealth();
     const interval = setInterval(pollHealth, 10000);
     return () => clearInterval(interval);
-  }, [mcvraUrl, chatbotUrl]);
+  }, [mcvraUrl, scorecardUrl, chatbotUrl]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#070a12] text-slate-100 font-sans">
@@ -117,6 +123,8 @@ export default function App() {
 
         <div className={activeTab === 'scorecard' ? 'flex-1 min-h-0 h-full w-full flex flex-col overflow-hidden' : 'hidden'}>
           <ScorecardView
+            scorecardUrl={scorecardUrl}
+            scorecardOnline={scorecardOnline}
             mcvraUrl={mcvraUrl}
             mcvraOnline={mcvraOnline}
             mcvraGraphContext={mcvraGraphContext}
@@ -170,6 +178,16 @@ export default function App() {
                   type="text"
                   value={mcvraUrl}
                   onChange={(e) => setMcvraUrl(e.target.value)}
+                  className="input-rich font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-400 block mb-1 font-semibold">Scorecard Generator API Host</label>
+                <input
+                  type="text"
+                  value={scorecardUrl}
+                  onChange={(e) => setScorecardUrl(e.target.value)}
                   className="input-rich font-mono"
                 />
               </div>
