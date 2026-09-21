@@ -21,13 +21,24 @@ export function transformMCVRATreeToReactFlow(treeData) {
 
   function formatChoices(node) {
     if (node.choices && Array.isArray(node.choices)) return node.choices;
+    if (node.data?.choices && Array.isArray(node.data.choices)) return node.data.choices;
     if (node.data?.metricValue?.value && Array.isArray(node.data.metricValue.value)) {
       return node.data.metricValue.value.map((v) => ({
         name: v.option || v.name || v.label || '',
         score: v.value !== undefined ? v.value : v.score
       }));
     }
+    if (Array.isArray(node.options)) return node.options;
     return [];
+  }
+
+  function resolveNumber(node, keys) {
+    for (const key of keys) {
+      const value = node[key] ?? node.data?.[key];
+      const number = typeof value === 'string' ? Number(value.replace('%', '').trim()) : Number(value);
+      if (Number.isFinite(number)) return number;
+    }
+    return null;
   }
 
   function traverse(node, depth = 0, parentId = null) {
@@ -66,6 +77,9 @@ export function transformMCVRATreeToReactFlow(treeData) {
         label: label,
         formula: formulaStr,
         choices: choicesList,
+        weightage: resolveNumber(node, ['weightage', 'weight', 'metric_weight', 'metricWeight']),
+        componentPercentage: resolveNumber(node, ['component_percentage', 'componentPercentage', 'component_percent', 'componentPercent', 'component_weight']),
+        parameterPercentage: resolveNumber(node, ['parameter_percentage', 'parameterPercentage', 'parameter_percent', 'parameterPercent', 'parameter_weight']),
         depth: node.data?.level !== undefined ? node.data.level : depth,
         rawType: nodeType
       }

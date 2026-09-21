@@ -41,7 +41,7 @@ import { nodeTypes } from './CustomNodes';
 import { CurvedEdge } from './CurvedEdge';
 import { transformMCVRATreeToReactFlow } from '../utils/graphTransformer';
 import { sampleMCVRATree } from '../utils/sampleTree';
-import { generateMcvraGraph, generateMcvraGraphStream, fetchMcvraFrameworks } from '../utils/api';
+import { generateMcvraGraph, generateMcvraGraphStream } from '../utils/api';
 import { Button } from './ui/button';
 import { McvraChatDrawer } from './McvraChatDrawer';
 
@@ -105,7 +105,7 @@ function highlightJsonSyntax(code) {
   return html;
 }
 
-function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
+function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGraphChange }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -131,7 +131,6 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
     ], null, 2)
   );
   const [frameworkId, setFrameworkId] = useState('');
-  const [frameworksList, setFrameworksList] = useState([]);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [streamProgress, setStreamProgress] = useState(null);
@@ -140,6 +139,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   const [rawTreeData, setRawTreeData] = useState(null);
   const [copied, setCopied] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [activeNodeModal, setActiveNodeModal] = useState(null); // null | 'formula' | 'choices'
   const [showStorageContext, setShowStorageContext] = useState(false);
@@ -208,28 +208,42 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
   // Close any open node-detail viewer whenever the selected node changes
   // (including deselection), so a stale modal never shows another node's data.
   useEffect(() => {
+    // Keep state-dependent controls identical during SSR and the first client render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveNodeModal(null);
   }, [selectedNode?.id]);
 
   // Auto-detect hostname if available in browser
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentDomain(window.location.hostname);
     }
   }, []);
 
-  // Load registered framework templates from backend
+  // Surface the current graph + assessment context to the parent page, so
+  // other tabs (e.g. the Scorecard Editor) can derive their own data from
+  // whatever graph was most recently generated here, instead of requiring
+  // it to be re-entered by hand.
   useEffect(() => {
-    async function loadFrameworks() {
-      if (mcvraOnline) {
-        const list = await fetchMcvraFrameworks(mcvraUrl);
-        if (list && list.length > 0) {
-          setFrameworksList(list);
-        }
-      }
-    }
-    loadFrameworks();
-  }, [mcvraOnline, mcvraUrl]);
+    if (!onGraphChange || nodes.length === 0) return;
+    onGraphChange({
+      nodes,
+      edges,
+      rawTreeData,
+      assessmentId,
+      userId,
+      domain: currentDomain || domain,
+      facilityType,
+      assessmentType,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges, rawTreeData, assessmentId, userId, currentDomain, domain, facilityType, assessmentType]);
 
   // Load tree onto canvas
   const loadTreeData = useCallback((treeData, domainName = 'csv_framework') => {
@@ -248,6 +262,10 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
 
   const handleGenerate = async (e) => {
     e?.preventDefault();
+    if (!file) {
+      setError('Upload an Excel or CSV framework file before generating the MCVRA graph.');
+      return;
+    }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -742,7 +760,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
               </div>
               <h3 className="text-base font-semibold text-slate-800 mb-1">No MCVRA Graph Loaded</h3>
               <p className="text-xs text-slate-500 max-w-sm">
-                Select a <strong className="text-slate-700">Facility Type</strong> and <strong className="text-slate-700">Assessment Hazard</strong>, then click <strong className="text-slate-700">"Generate Graph"</strong> to render the MCVRA tree.
+                Select a <strong className="text-slate-700">Facility Type</strong> and <strong className="text-slate-700">Assessment Hazard</strong>, then click <strong className="text-slate-700">&quot;Generate Graph&quot;</strong> to render the MCVRA tree.
               </p>
             </div>
           )}
@@ -826,7 +844,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen }) {
                   key={type}
                   type="button"
                   onClick={() => navigateToNodeType(type)}
-                  disabled={count === 0}
+                  disabled={isHydrated && count === 0}
                   className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-all ${count > 0
                     ? 'hover:bg-slate-100 hover:text-slate-900 cursor-pointer font-medium text-slate-700'
                     : 'opacity-40 cursor-not-allowed text-slate-400'

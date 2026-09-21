@@ -2,7 +2,9 @@ import axios from 'axios';
 
 export const DEFAULT_MCVRA_URL = 'http://localhost:8000';
 export const DEFAULT_CHATBOT_URL = 'http://localhost:8080';
-export const DEFAULT_RAG_TOKEN = 'secret-token';
+// Authentication must be supplied through the settings UI or a server-side
+// proxy. Never ship a production credential in the browser bundle.
+export const DEFAULT_RAG_TOKEN = '';
 
 // Health checks
 export async function checkMcvraHealth(baseUrl = DEFAULT_MCVRA_URL) {
@@ -26,10 +28,12 @@ export async function checkChatbotHealth(baseUrl = DEFAULT_CHATBOT_URL) {
 // MCVRA Generator endpoints
 export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   try {
-    const res = await axios.get(`${baseUrl}/frameworks`);
+    const res = await axios.get(`${baseUrl}/mcda/frameworks`);
     return res.data;
   } catch (e) {
-    console.error('Error fetching MCVRA frameworks:', e);
+    if (e?.response?.status !== 404) {
+      console.error('Error fetching MCVRA frameworks:', e);
+    }
     return [];
   }
 }
@@ -204,31 +208,36 @@ export async function generateMcvraGraphStream(
       const dataStr = trimmed.slice(5).trim();
       if (!dataStr) continue;
 
+      let payload;
       try {
-        const payload = JSON.parse(dataStr);
-        if (payload.event === 'progress' || payload.event === 'start') {
-          if (onProgress) onProgress(payload);
-        } else if (payload.event === 'complete') {
-          finalResult = payload.result;
-        } else if (payload.event === 'error') {
-          throw new Error(payload.detail || 'LangGraph pipeline streaming error');
-        }
+        payload = JSON.parse(dataStr);
       } catch (err) {
-        if (err.message.includes('LangGraph pipeline streaming error') || err.message.includes('MCVRA streaming request failed')) {
-          throw err;
-        }
         console.warn('Error parsing SSE chunk:', err);
+        continue;
+      }
+
+      if (payload.event === 'progress' || payload.event === 'start') {
+        if (onProgress) onProgress(payload);
+      } else if (payload.event === 'complete') {
+        finalResult = payload.result;
+      } else if (payload.event === 'error') {
+        throw new Error(`MCVRA streaming error: ${payload.detail || 'LangGraph pipeline streaming error'}`);
       }
     }
   }
 
   if (buffer.trim().startsWith('data:')) {
-    try {
-      const payload = JSON.parse(buffer.trim().slice(5).trim());
-      if (payload.event === 'complete') finalResult = payload.result;
-      if (payload.event === 'error') throw new Error(payload.detail || 'LangGraph streaming error');
-    } catch (e) {
-      // trailing chunk parse bypass
+    for (const line of buffer.trim().split(/\n+/)) {
+      if (!line.startsWith('data:')) continue;
+      let payload;
+      try {
+        payload = JSON.parse(line.slice(5).trim());
+      } catch (e) {
+        console.warn('Error parsing trailing SSE chunk:', e);
+        continue;
+      }
+      if (payload?.event === 'complete') finalResult = payload.result;
+      if (payload?.event === 'error') throw new Error(`MCVRA streaming error: ${payload.detail || 'LangGraph streaming error'}`);
     }
   }
 
@@ -317,30 +326,40 @@ export async function chatWithMcvraStream(
       const jsonStr = trimmed.slice(5).trim();
       if (!jsonStr) continue;
 
+      let eventData;
       try {
-        const eventData = JSON.parse(jsonStr);
-        if (eventData.event === 'chunk') {
-          if (onChunk) onChunk(eventData.delta, eventData);
-        } else if (eventData.event === 'start') {
-          if (onChunk) onChunk('', eventData);
-        } else if (eventData.event === 'complete') {
-          finalResult = eventData;
-          if (onChunk) onChunk('', eventData);
-        } else if (eventData.event === 'error') {
-          throw new Error(eventData.detail || 'Chat streaming error');
-        }
+        eventData = JSON.parse(jsonStr);
       } catch (err) {
-        if (err.message && err.message.includes('Chat streaming error')) throw err;
         console.warn('Error parsing SSE chunk:', err);
+        continue;
+      }
+
+      if (eventData.event === 'chunk') {
+        if (onChunk) onChunk(eventData.delta, eventData);
+      } else if (eventData.event === 'start') {
+        if (onChunk) onChunk('', eventData);
+      } else if (eventData.event === 'complete') {
+        finalResult = eventData;
+        if (onChunk) onChunk('', eventData);
+      } else if (eventData.event === 'error') {
+        throw new Error(`Chat streaming error: ${eventData.detail || 'Chat streaming error'}`);
       }
     }
   }
 
   if (buffer.trim().startsWith('data:')) {
-    try {
-      const eventData = JSON.parse(buffer.trim().slice(5).trim());
-      if (eventData.event === 'complete') finalResult = eventData;
-    } catch (e) {}
+    for (const line of buffer.trim().split(/\n+/)) {
+      if (!line.startsWith('data:')) continue;
+      let eventData;
+      try {
+        eventData = JSON.parse(line.slice(5).trim());
+      } catch (e) {
+        console.warn('Error parsing trailing SSE chunk:', e);
+        continue;
+      }
+      if (eventData?.event === 'complete') finalResult = eventData;
+      if (eventData?.event === 'error') throw new Error(`Chat streaming error: ${eventData.detail || 'Chat streaming error'}`);
+    }
   }
 
   return finalResult;
@@ -353,7 +372,8 @@ export async function fetchChatSuggestions(baseUrl = DEFAULT_CHATBOT_URL, apiKey
     const res = await axios.get(`${baseUrl}/chat-suggestions?limit=${limit}`, {
       headers: { 'api-key': apiKey }
     });
-    return res.data;
+    const suggestions = Array.isArray(res.data) ? res.data : res.data?.suggestions;
+    return { suggestions: Array.isArray(suggestions) ? suggestions : [] };
   } catch (e) {
     return { suggestions: [] };
   }
