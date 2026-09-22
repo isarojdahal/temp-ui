@@ -14,17 +14,25 @@ import {
   checkChatbotHealth
 } from './utils/api';
 import { Button } from './components/ui/button';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Settings, X, Sliders, Server } from 'lucide-react';
+import { getGlobalConfig, saveGlobalConfig } from './utils/config';
 
 const VALID_TABS = new Set(['mcvra', 'scorecard', 'chatbot']);
 const MCVRA_CONTEXT_STORAGE_KEY = 'drishti_mcvra_graph_context';
 
 export default function App() {
+  const initialConfig = getGlobalConfig();
   const [activeTab, setActiveTab] = useState('mcvra');
-  const [mcvraUrl, setMcvraUrl] = useState(DEFAULT_MCVRA_URL);
-  const [scorecardUrl, setScorecardUrl] = useState(DEFAULT_SCORECARD_URL);
-  const [chatbotUrl, setChatbotUrl] = useState(DEFAULT_CHATBOT_URL);
-  const [apiKey, setApiKey] = useState(DEFAULT_RAG_TOKEN);
+  const [mcvraUrl, setMcvraUrl] = useState(initialConfig.mcvraUrl);
+  const [scorecardUrl, setScorecardUrl] = useState(initialConfig.scorecardUrl);
+  const [chatbotUrl, setChatbotUrl] = useState(initialConfig.chatbotUrl);
+  const [apiKey, setApiKey] = useState(initialConfig.apiKey);
+  const [assessmentId, setAssessmentId] = useState(initialConfig.assessmentId);
+  const [domain, setDomain] = useState(initialConfig.domain);
+  const [userId, setUserId] = useState(initialConfig.userId);
+
+  const [draftSettings, setDraftSettings] = useState(initialConfig);
+
   const [mcvraOnline, setMcvraOnline] = useState(false);
   const [scorecardOnline, setScorecardOnline] = useState(false);
   const [chatbotOnline, setChatbotOnline] = useState(false);
@@ -55,6 +63,32 @@ export default function App() {
       }
     }
   }, []);
+
+  const handleOpenSettings = () => {
+    setDraftSettings({
+      assessmentId,
+      domain,
+      userId,
+      mcvraUrl,
+      scorecardUrl,
+      chatbotUrl,
+      apiKey,
+    });
+    setShowSettingsModal(true);
+  };
+
+  const handleSaveSettings = () => {
+    setAssessmentId(draftSettings.assessmentId);
+    setDomain(draftSettings.domain);
+    setUserId(draftSettings.userId);
+    setMcvraUrl(draftSettings.mcvraUrl);
+    setScorecardUrl(draftSettings.scorecardUrl);
+    setChatbotUrl(draftSettings.chatbotUrl);
+    setApiKey(draftSettings.apiKey);
+
+    saveGlobalConfig(draftSettings);
+    setShowSettingsModal(false);
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -99,7 +133,7 @@ export default function App() {
         chatbotOnline={chatbotOnline}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={activeTab === 'mcvra' ? setSidebarOpen : null}
-        onOpenSettings={() => setShowSettingsModal(true)}
+        onOpenSettings={handleOpenSettings}
         onToggleChatDrawer={() => setIsChatDrawerOpen((prev) => !prev)}
       />
 
@@ -116,6 +150,9 @@ export default function App() {
             setSidebarOpen={setSidebarOpen}
             onGraphChange={handleGraphChange}
             isActive={activeTab === 'mcvra'}
+            assessmentId={assessmentId}
+            domain={domain}
+            userId={userId}
           />
         </div>
 
@@ -126,6 +163,9 @@ export default function App() {
             mcvraUrl={mcvraUrl}
             mcvraOnline={mcvraOnline}
             mcvraGraphContext={mcvraGraphContext}
+            assessmentId={assessmentId}
+            domain={domain}
+            userId={userId}
           />
         </div>
 
@@ -142,61 +182,157 @@ export default function App() {
       {/* Settings Modal Overlay */}
       {showSettingsModal && (
         <div className="pdf-modal-backdrop" onClick={() => setShowSettingsModal(false)}>
-          <div className="card-rich w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2">
-              Drishti AI System Settings
-            </h3>
+          <div
+            className="card-rich w-full max-w-lg space-y-4 bg-white text-slate-900 shadow-2xl border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-[#e9f3f0] text-[#208661]">
+                  <Settings size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Drishti AI System Settings
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Configure global assessment parameters and backend service endpoints
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1 font-semibold">MCVRA Generator API Host</label>
-                <input
-                  type="text"
-                  value={mcvraUrl}
-                  onChange={(e) => setMcvraUrl(e.target.value)}
-                  className="input-rich font-mono"
-                />
+            <div className="space-y-4 text-xs max-h-[70vh] overflow-y-auto pr-1">
+              {/* Section 1: Assessment & Tenancy Configuration */}
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-1.5 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                  <Sliders size={13} className="text-[#208661]" />
+                  <span>Assessment & Tenancy Context</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">Assessment ID</label>
+                    <input
+                      type="text"
+                      value={draftSettings.assessmentId}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, assessmentId: e.target.value }))
+                      }
+                      placeholder="demo-assessment"
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">Domain / Tenant</label>
+                    <input
+                      type="text"
+                      value={draftSettings.domain}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, domain: e.target.value }))
+                      }
+                      placeholder="health_facility"
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">User / Analyst ID</label>
+                    <input
+                      type="text"
+                      value={draftSettings.userId}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, userId: e.target.value }))
+                      }
+                      placeholder="analyst-1"
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1 font-semibold">Scorecard Generator API Host</label>
-                <input
-                  type="text"
-                  value={scorecardUrl}
-                  onChange={(e) => setScorecardUrl(e.target.value)}
-                  className="input-rich font-mono"
-                />
-              </div>
+              {/* Section 2: Backend API Services */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                  <Server size={13} className="text-[#208661]" />
+                  <span>Backend Service Endpoints</span>
+                </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1 font-semibold">Climate Chatbot RAG API Host</label>
-                <input
-                  type="text"
-                  value={chatbotUrl}
-                  onChange={(e) => setChatbotUrl(e.target.value)}
-                  className="input-rich font-mono"
-                />
-              </div>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">MCVRA Generator API Host</label>
+                    <input
+                      type="text"
+                      value={draftSettings.mcvraUrl}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, mcvraUrl: e.target.value }))
+                      }
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1 font-semibold">Service Token (api-key Header)</label>
-                <input
-                  type="text"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="input-rich font-mono"
-                />
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">Scorecard Generator API Host</label>
+                    <input
+                      type="text"
+                      value={draftSettings.scorecardUrl}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, scorecardUrl: e.target.value }))
+                      }
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">Climate Chatbot RAG API Host</label>
+                    <input
+                      type="text"
+                      value={draftSettings.chatbotUrl}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, chatbotUrl: e.target.value }))
+                      }
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-600 block mb-1 font-semibold text-[11px]">Service Token (api-key Header)</label>
+                    <input
+                      type="text"
+                      value={draftSettings.apiKey}
+                      onChange={(e) =>
+                        setDraftSettings((prev) => ({ ...prev, apiKey: e.target.value }))
+                      }
+                      placeholder="Enter API Key / Token"
+                      className="input-rich font-mono text-xs w-full"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettingsModal(false)}
+              >
+                Cancel
+              </Button>
               <Button
                 variant="gradient"
                 size="sm"
-                onClick={() => {
-                  pollHealth();
-                  setShowSettingsModal(false);
-                }}
+                onClick={handleSaveSettings}
               >
                 Save & Apply Settings
               </Button>

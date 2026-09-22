@@ -31,6 +31,7 @@ import {
 } from '../utils/scorecardApi';
 import { DEFAULT_SCORECARD_URL } from '../utils/api';
 import { extractIndicatorsFromGraph, extractOverallRiskFromIndicators } from '../utils/mcvraToScorecard';
+import { getGlobalConfig } from '../utils/config';
 
 const DEMO_INDICATORS = [
   { id: 'i1', name: 'Perimeter Inundation', pillar: 'Hazard & Exposure', category: 'Topographical', score: 35, scaleMin: 0, scaleMax: 50, unit: '%' },
@@ -112,7 +113,21 @@ function adjustIndicatorsToOverall(target, currentIndicators) {
   }));
 }
 
-export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext, scorecardUrl, scorecardOnline }) {
+export function ScorecardView({
+  mcvraUrl,
+  mcvraOnline,
+  mcvraGraphContext,
+  scorecardUrl,
+  scorecardOnline,
+  assessmentId: propAssessmentId,
+  domain: propDomain,
+  userId: propUserId,
+}) {
+  const cfg = getGlobalConfig();
+  const assessmentId = propAssessmentId || cfg.assessmentId;
+  const domain = propDomain || cfg.domain;
+  const userId = propUserId || cfg.userId;
+
   const activeScorecardUrl = scorecardUrl || DEFAULT_SCORECARD_URL;
 
   // Sidebar visibility & active tab
@@ -120,9 +135,6 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext, scorec
   const [activeDrawerTab, setActiveDrawerTab] = useState('profile'); // 'profile' | 'scores' | 'survey'
 
   // Card Profile attributes (Compulsory Payload 1)
-  const [assessmentId, setAssessmentId] = useState('demo-assessment');
-  const [domain, setDomain] = useState('health_facility');
-  const [userId, setUserId] = useState('analyst-1');
   const [assessmentName, setAssessmentName] = useState('Nilgunj Clinic Risk Assessment');
   const [facilityName, setFacilityName] = useState('Nilgunj Primary Health Center');
   const [location, setLocation] = useState('Chitwan District, Ward 4');
@@ -164,9 +176,6 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext, scorec
     setIndicators(derived);
     setOverallScore(extractOverallRiskFromIndicators(derived));
     setIndicatorSource('mcvra');
-    if (mcvraGraphContext.assessmentId) setAssessmentId(mcvraGraphContext.assessmentId);
-    if (mcvraGraphContext.userId) setUserId(mcvraGraphContext.userId);
-    if (mcvraGraphContext.domain) setDomain(mcvraGraphContext.domain);
     if (mcvraGraphContext.facilityType) {
       setFacilityType(mcvraGraphContext.facilityType);
       setFacilityName(`${mcvraGraphContext.facilityType.replace(/_/g, ' ')} Unit`.replace(/\b\w/g, (c) => c.toUpperCase()));
@@ -188,9 +197,6 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext, scorec
   const loadSampleData = () => {
     setIndicators(DEMO_INDICATORS);
     setIndicatorSource('demo');
-    setAssessmentId('demo-assessment');
-    setDomain('health_facility');
-    setUserId('analyst-1');
     setAssessmentName('Nilgunj Clinic Risk Assessment');
     setFacilityName('Nilgunj Primary Health Center');
     setLocation('Chitwan District, Ward 4');
@@ -836,23 +842,6 @@ export function ScorecardView({ mcvraUrl, mcvraOnline, mcvraGraphContext, scorec
               <PanelLeftOpen size={14} className="text-[#208661]" /> Parameters
             </Button>
           )}
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Assessment ID</span>
-            <input
-              className="input-rich w-36 py-1 text-[11px]"
-              value={assessmentId}
-              onChange={(e) => setAssessmentId(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Domain</span>
-            <input className="input-rich w-36 py-1 text-[11px]" value={domain} onChange={(e) => setDomain(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">User</span>
-            <input className="input-rich w-24 py-1 text-[11px]" value={userId} onChange={(e) => setUserId(e.target.value)} />
-          </div>
 
           <div className="flex-1" />
 

@@ -31,9 +31,7 @@ import {
   Image as ImageIcon,
   Pencil,
   Settings2,
-  X,
-  ChevronDown,
-  ChevronRight
+  X
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -44,6 +42,7 @@ import { sampleMCVRATree } from '../utils/sampleTree';
 import { generateMcvraGraph, generateMcvraGraphStream } from '../utils/api';
 import { Button } from './ui/button';
 import { McvraChatDrawer } from './McvraChatDrawer';
+import { getGlobalConfig } from '../utils/config';
 
 const edgeTypes = { curved: CurvedEdge };
 
@@ -105,7 +104,20 @@ function highlightJsonSyntax(code) {
   return html;
 }
 
-function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGraphChange }) {
+function FlowViewer({
+  mcvraUrl,
+  mcvraOnline,
+  sidebarOpen,
+  setSidebarOpen,
+  onGraphChange,
+  assessmentId: propAssessmentId,
+  domain: configuredDomain,
+  userId: propUserId,
+}) {
+  const cfg = getGlobalConfig();
+  const assessmentId = propAssessmentId || cfg.assessmentId;
+  const userId = propUserId || cfg.userId;
+
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -113,9 +125,6 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
   const [prompt, setPrompt] = useState('Flood Risk & Vulnerability Assessment');
   const [facilityType, setFacilityType] = useState('health_facility');
   const [assessmentType, setAssessmentType] = useState('flood');
-  const [assessmentId, setAssessmentId] = useState('asm-default');
-  const [userId, setUserId] = useState('user-1');
-  const [currentDomain, setCurrentDomain] = useState('pokhara.dastaa.org');
   const [surveyColumnsText, setSurveyColumnsText] = useState(
     JSON.stringify([
       {
@@ -135,14 +144,20 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
   const [loading, setLoading] = useState(false);
   const [streamProgress, setStreamProgress] = useState(null);
   const [error, setError] = useState(null);
-  const [domain, setDomain] = useState('health_facility');
+  const [domain, setDomain] = useState(() => configuredDomain || cfg.domain);
+
+  useEffect(() => {
+    if (configuredDomain) {
+      setDomain(configuredDomain);
+    }
+  }, [configuredDomain]);
+
   const [rawTreeData, setRawTreeData] = useState(null);
   const [copied, setCopied] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [activeNodeModal, setActiveNodeModal] = useState(null); // null | 'formula' | 'choices'
-  const [showStorageContext, setShowStorageContext] = useState(false);
   const abortControllerRef = useRef(null);
   const surveyPreRef = useRef(null);
   const surveyTextareaRef = useRef(null);
@@ -218,14 +233,6 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
     setActiveNodeModal(null);
   }, [selectedNode?.id]);
 
-  // Auto-detect hostname if available in browser
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentDomain(window.location.hostname);
-    }
-  }, []);
-
   // Surface the current graph + assessment context to the parent page, so
   // other tabs (e.g. the Scorecard Editor) can derive their own data from
   // whatever graph was most recently generated here, instead of requiring
@@ -238,12 +245,12 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
       rawTreeData,
       assessmentId,
       userId,
-      domain: currentDomain || domain,
+      domain,
       facilityType,
       assessmentType,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, rawTreeData, assessmentId, userId, currentDomain, domain, facilityType, assessmentType]);
+  }, [nodes, edges, rawTreeData, assessmentId, userId, domain, facilityType, assessmentType]);
 
   // Load tree onto canvas
   const loadTreeData = useCallback((treeData, domainName = 'csv_framework') => {
@@ -282,7 +289,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
       completedNodes: []
     });
 
-    const activeDomain = currentDomain || ((typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'pokhara.dastaa.org');
+    const activeDomain = domain || 'health_facility';
 
     try {
       const data = await generateMcvraGraphStream(
@@ -526,72 +533,6 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
               </div>
             </div>
 
-            {/* Domain & Tenancy (SQLite Cache Context) */}
-            <div className="rounded-xl bg-slate-50 border border-slate-200 shadow-2xs overflow-hidden transition-all">
-              <button
-                type="button"
-                onClick={() => setShowStorageContext(!showStorageContext)}
-                className="w-full p-2.5 flex items-center justify-between text-left hover:bg-slate-100/80 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-1.5">
-                  {showStorageContext ? (
-                    <ChevronDown size={14} className="text-slate-500" />
-                  ) : (
-                    <ChevronRight size={14} className="text-slate-500" />
-                  )}
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    Domain & Storage Context
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-[#208661] font-semibold">
-                    SQLite Cache
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    {showStorageContext ? 'Hide' : 'Show'}
-                  </span>
-                </div>
-              </button>
-
-              {showStorageContext && (
-                <div className="p-3 pt-1 space-y-2 border-t border-slate-200/60">
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Domain / Tenant Name</label>
-                    <input
-                      type="text"
-                      value={currentDomain}
-                      onChange={(e) => setCurrentDomain(e.target.value)}
-                      placeholder="e.g. pokhara.dastaa.org"
-                      className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Assessment ID</label>
-                      <input
-                        type="text"
-                        value={assessmentId}
-                        onChange={(e) => setAssessmentId(e.target.value)}
-                        placeholder="asm-default"
-                        className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">User ID</label>
-                      <input
-                        type="text"
-                        value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
-                        placeholder="user-1"
-                        className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#208661] focus:border-[#208661]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Framework File (.xlsx / .csv)</label>
               <div className="p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:border-[#208661] transition">
@@ -821,7 +762,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
             >
               <span className="w-2 h-2 rounded-full bg-[#208661] group-hover:scale-125 transition-transform" />
               <span className="font-semibold text-slate-500">Domain:</span>
-              <span className="font-mono text-[#208661] font-bold">{currentDomain || 'pokhara.dastaa.org'}</span>
+              <span className="font-mono text-[#208661] font-bold">{domain || 'pokhara.dastaa.org'}</span>
               <span className="text-slate-300">|</span>
               <span className="text-slate-500 font-mono text-[11px]">{assessmentId}</span>
             </button>
@@ -967,7 +908,7 @@ function FlowViewer({ mcvraUrl, mcvraOnline, sidebarOpen, setSidebarOpen, onGrap
         assessmentId={assessmentId}
         userId={userId}
         assessmentName={prompt}
-        domain={currentDomain || domain}
+        domain={domain}
         onApplyUpdatedGraph={handleApplyUpdatedGraph}
         onFitView={() => fitView({ padding: 0.2 })}
       />

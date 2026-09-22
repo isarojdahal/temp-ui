@@ -28,6 +28,7 @@ This is a pure [React 19](https://react.dev) single-page application powered by 
   - Multi-version management with review status, semantic and structural validation, auto-drafting from active MCVRA graphs, and version history switching.
   - Seamless state persistence across tabs without re-rendering or state loss.
 - **Node Inspector**: Real-time parameter inspection, formula viewing, choices score mapping, and raw JSON export.
+- **Centralized System & Assessment Settings**: Unified settings dialog accessible from the top navigation bar to configure global assessment metadata (`Assessment ID`, `Domain / Tenant Name`, and `User / Analyst ID`) alongside backend service hosts (`MCVRA Generator API`, `Scorecard Generator API`, `Climate Chatbot RAG API`, and service authentication tokens). Eliminates redundant inputs across individual feature pages and persists all configurations across sessions in `localStorage`.
 
 ## Getting Started
 
