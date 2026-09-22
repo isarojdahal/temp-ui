@@ -7,11 +7,7 @@ import {
   Link as LinkIcon,
   ImageOff,
   MapPin,
-  Map as MapIcon,
-  Info,
-  Layers,
   CheckCircle2,
-  AlertCircle,
   AlertTriangle,
   Building2,
   Lightbulb,
@@ -19,13 +15,6 @@ import {
   FileText,
   ShieldCheck,
   ShieldAlert,
-  BarChart3,
-  BarChart2,
-  Table as TableIcon,
-  Tag,
-  Compass,
-  Gauge,
-  Sparkles,
 } from 'lucide-react';
 import { ChartRenderer } from './ChartRenderer';
 
@@ -308,19 +297,9 @@ export const puckConfig = {
         }
 
         if (level === 2) {
-          const lower = (content || '').toLowerCase();
-          const SectionIcon = lower.includes('facility') || lower.includes('overview') || lower.includes('profile')
-            ? Building2
-            : lower.includes('score') || lower.includes('pillar') || lower.includes('breakdown')
-              ? BarChart3
-              : lower.includes('interpretation') || lower.includes('insight') || lower.includes('survey')
-                ? FileText
-                : Compass;
-
           return (
             <div className="w-full col-span-full pt-2 pb-1 mb-2.5 flex items-center gap-2">
               <span className="w-1.5 h-3.5 bg-[#208661] rounded-full inline-block shrink-0" />
-              <SectionIcon size={13} className="text-[#208661] shrink-0" />
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800" style={{ textAlign: align }}>
                 {content || <span className="text-slate-300 italic">Section Title</span>}
               </h2>
@@ -441,20 +420,12 @@ export const puckConfig = {
           >
             <div className="flex items-start justify-between gap-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
-                <Gauge size={12} className="text-slate-400 shrink-0" />
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight truncate">{label}</span>
               </div>
               <span
-                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide shrink-0 inline-flex items-center gap-1"
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide shrink-0"
                 style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
               >
-                {status === 'critical' || status === 'high' ? (
-                  <AlertTriangle size={9} />
-                ) : status === 'low' ? (
-                  <CheckCircle2 size={9} />
-                ) : (
-                  <Activity size={9} />
-                )}
                 {status}
               </span>
             </div>
@@ -462,7 +433,7 @@ export const puckConfig = {
               <span className="text-2xl font-black text-slate-900 tracking-tight">{numVal}</span>
               {unit && <span className="text-xs font-semibold text-slate-500">{unit}</span>}
               <span className="text-[10px] text-slate-400 font-medium">/ {hi}</span>
-              <TrendIcon size={13} className="ml-auto text-slate-400" />
+              {trend && trend !== 'flat' && <TrendIcon size={13} className="ml-auto text-slate-400" />}
             </div>
             <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
               <div
@@ -521,10 +492,7 @@ export const puckConfig = {
           <div className="scorecard-chart w-full col-span-full rounded-xl border border-slate-200/80 bg-white p-3.5 text-left shadow-2xs flex flex-col justify-between">
             {title && (
               <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <BarChart2 size={13} className="text-[#208661] shrink-0" />
-                  <h4 className="text-xs font-bold text-slate-800 tracking-wide uppercase truncate">{title}</h4>
-                </div>
+                <h4 className="text-xs font-bold text-slate-800 tracking-wide uppercase truncate">{title}</h4>
                 <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">{chartType}</span>
               </div>
             )}
@@ -553,8 +521,7 @@ export const puckConfig = {
       render: ({ title, columns = ['Indicator', 'Score'], rows = [] }) => (
         <div className="scorecard-table w-full col-span-full rounded-xl border border-slate-200/80 bg-white overflow-hidden text-left shadow-2xs flex flex-col justify-between">
           {title && (
-            <div className="px-3.5 py-2 text-xs font-bold text-slate-800 border-b border-slate-100 bg-slate-50/60 tracking-wide uppercase flex items-center gap-1.5">
-              <TableIcon size={13} className="text-[#208661] shrink-0" />
+            <div className="px-3.5 py-2 text-xs font-bold text-slate-800 border-b border-slate-100 bg-slate-50/60 tracking-wide uppercase">
               <span>{title}</span>
             </div>
           )}
@@ -612,7 +579,6 @@ export const puckConfig = {
         return (
           <div className="scorecard-additional-info w-full col-span-full rounded-xl border border-slate-200/80 bg-white p-3.5 text-left shadow-2xs">
             <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-slate-100">
-              <Info size={14} className="text-[#208661]" />
               <h4 className="text-xs font-bold text-slate-800 tracking-wide uppercase">{title}</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -625,7 +591,6 @@ export const puckConfig = {
                     className="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg bg-slate-50/80 border border-slate-100/90 hover:bg-slate-100/70 transition-colors"
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <Tag size={10} className="text-slate-400 shrink-0" />
                       <span className="font-medium text-slate-600 text-[11px] truncate">{item.key || item.name}</span>
                     </div>
                     <span className="text-[11px] font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200/70 shadow-2xs shrink-0">
@@ -707,8 +672,8 @@ export const puckConfig = {
         icon: {
           type: 'select',
           label: 'Card Icon',
-          options: [
-            { label: 'Auto (Detect from text)', value: 'auto' },
+        options: [
+            { label: 'None', value: 'none' },
             { label: 'Building (Facility / Location)', value: 'building' },
             { label: 'Lightbulb (Recommendations)', value: 'lightbulb' },
             { label: 'Activity (Analytical Insights)', value: 'activity' },
@@ -735,11 +700,11 @@ export const puckConfig = {
         title: 'Facility Overview',
         content: 'Primary Health Clinic evaluated for hazard exposure and structural vulnerability.',
         label: 'Assessment Target',
-        icon: 'auto',
+        icon: 'none',
         status: 'moderate',
         value: null,
       },
-      render: ({ title = 'Card Title', content = '', label = '', icon = 'auto', status = 'moderate', value = null, unit = '', scaleMin = 0, scaleMax = 100 }) => {
+      render: ({ title = 'Card Title', content = '', label = '', icon = 'none', status = 'moderate', value = null, unit = '', scaleMin = 0, scaleMax = 100 }) => {
         const colors = STATUS_COLORS[status] || STATUS_COLORS.moderate;
         const hasMetric = value !== null && value !== undefined && value !== '';
         const numVal = Number(value) || 0;
@@ -747,22 +712,16 @@ export const puckConfig = {
         const hi = Number(scaleMax) || 100;
         const pct = hi > lo ? Math.max(0, Math.min(100, ((numVal - lo) / (hi - lo)) * 100)) : 0;
 
-        const getCardIcon = () => {
-          if (icon === 'building') return Building2;
-          if (icon === 'lightbulb') return Lightbulb;
-          if (icon === 'activity') return Activity;
-          if (icon === 'shield') return ShieldAlert;
-          if (icon === 'file') return FileText;
-          if (icon === 'alert') return AlertTriangle;
-          if (icon === 'check') return CheckCircle2;
-          const combined = `${title || ''} ${label || ''}`.toLowerCase();
-          if (combined.includes('recommend') || combined.includes('mitigat') || combined.includes('action') || combined.includes('priorit')) return Lightbulb;
-          if (combined.includes('facility') || combined.includes('overview') || combined.includes('center') || combined.includes('clinic')) return Building2;
-          if (combined.includes('hazard') || combined.includes('flood') || status === 'critical' || status === 'high') return ShieldAlert;
-          if (combined.includes('analyt') || combined.includes('interpret') || combined.includes('find') || combined.includes('driver')) return Activity;
-          return FileText;
+        const CARD_ICONS = {
+          building: Building2,
+          lightbulb: Lightbulb,
+          activity: Activity,
+          shield: ShieldAlert,
+          file: FileText,
+          alert: AlertTriangle,
+          check: CheckCircle2,
         };
-        const CardIcon = getCardIcon();
+        const CardIcon = CARD_ICONS[icon] || null;
 
         return (
           <div
@@ -772,12 +731,14 @@ export const puckConfig = {
             <div>
               <div className="flex items-center justify-between gap-1.5 mb-1.5">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <div
-                    className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-                    style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
-                  >
-                    <CardIcon size={11} />
-                  </div>
+                  {CardIcon && (
+                    <div
+                      className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                      style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
+                    >
+                      <CardIcon size={11} />
+                    </div>
+                  )}
                   {label ? (
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
                       {label}
@@ -785,16 +746,9 @@ export const puckConfig = {
                   ) : null}
                 </div>
                 <span
-                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide shrink-0 inline-flex items-center gap-1"
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide shrink-0"
                   style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
                 >
-                  {status === 'critical' || status === 'high' ? (
-                    <AlertTriangle size={8} />
-                  ) : status === 'low' ? (
-                    <CheckCircle2 size={8} />
-                  ) : (
-                    <Activity size={8} />
-                  )}
                   {status}
                 </span>
               </div>
