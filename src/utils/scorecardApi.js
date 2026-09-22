@@ -9,7 +9,7 @@ export async function fetchScorecardRegistry(baseUrl = DEFAULT_SCORECARD_URL) {
 }
 
 export async function generateScorecard(baseUrl = DEFAULT_SCORECARD_URL, payload) {
-  const res = await axios.post(`${baseUrl}/generate-scorecard`, payload);
+  const res = await axios.post(`${baseUrl}/generate`, payload);
   return res.data;
 }
 
