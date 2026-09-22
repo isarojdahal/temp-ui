@@ -103,7 +103,7 @@ export async function generateMcvraGraph(
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  let url = `${baseUrl}/generate-mcvra?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  let url = `${baseUrl}/generate?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
   if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
   if (domain) url += `&domain=${encodeURIComponent(domain)}`;
   if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
@@ -171,7 +171,7 @@ export async function generateMcvraGraphStream(
   const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
   const colsParam = encodeURIComponent(JSON.stringify(cols));
 
-  let url = `${baseUrl}/generate-mcvra?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
+  let url = `${baseUrl}/generate?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
   if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
   if (domain) url += `&domain=${encodeURIComponent(domain)}`;
   if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
@@ -276,7 +276,7 @@ export async function chatWithMcvra(
     payload.graph = Array.isArray(graph) ? graph : [graph];
   }
 
-  const res = await axios.post(`${baseUrl}/chat-with-mcvra`, payload, {
+  const res = await axios.post(`${baseUrl}/chat`, payload, {
     headers: { 'Content-Type': 'application/json' },
     timeout: 60000,
   });
@@ -303,7 +303,7 @@ export async function chatWithMcvraStream(
     payload.graph = Array.isArray(graph) ? graph : [graph];
   }
 
-  const response = await fetch(`${baseUrl}/chat-with-mcvra?stream=true`, {
+  const response = await fetch(`${baseUrl}/chat?stream=true`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
