@@ -4,8 +4,6 @@ import React from 'react';
 import {
   Layers,
   MessageSquareText,
-  FileText,
-  Activity,
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
@@ -26,10 +24,8 @@ export function Header({
 }) {
   const tabs = [
     { id: 'mcvra', label: 'MCVRA Graph Generator', icon: Layers },
-    { id: 'scorecard', label: 'Scorecard Editor', icon: LayoutDashboard },
-    { id: 'chatbot', label: 'Climate AI Assistant', icon: MessageSquareText },
-    { id: 'documents', label: 'Knowledge Base', icon: FileText },
-    { id: 'dashboard', label: 'API Diagnostics', icon: Activity }
+    { id: 'scorecard', label: 'Scorecard', icon: LayoutDashboard },
+    { id: 'chatbot', label: 'Climate AI Assistant', icon: MessageSquareText }
   ];
 
   return (

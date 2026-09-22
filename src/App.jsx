@@ -3,8 +3,6 @@ import { Header } from './components/Header';
 import { McvraVisualizer } from './components/McvraVisualizer';
 import { ScorecardView } from './components/ScorecardView';
 import { ChatbotView } from './components/ChatbotView';
-import { DocumentsView } from './components/DocumentsView';
-import { DashboardView } from './components/DashboardView';
 import { FloatingChatDrawer } from './components/FloatingChatDrawer';
 import {
   DEFAULT_MCVRA_URL,
@@ -18,7 +16,7 @@ import {
 import { Button } from './components/ui/button';
 import { Sparkles } from 'lucide-react';
 
-const VALID_TABS = new Set(['mcvra', 'scorecard', 'chatbot', 'documents', 'dashboard']);
+const VALID_TABS = new Set(['mcvra', 'scorecard', 'chatbot']);
 const MCVRA_CONTEXT_STORAGE_KEY = 'drishti_mcvra_graph_context';
 
 export default function App() {
@@ -139,28 +137,6 @@ export default function App() {
             setApiKey={setApiKey}
           />
         </div>
-
-        <div className={activeTab === 'documents' ? 'flex-1 min-h-0 h-full w-full flex flex-col overflow-hidden' : 'hidden'}>
-          <DocumentsView
-            chatbotUrl={chatbotUrl}
-            chatbotOnline={chatbotOnline}
-            apiKey={apiKey}
-          />
-        </div>
-
-        <div className={activeTab === 'dashboard' ? 'flex-1 min-h-0 h-full w-full flex flex-col overflow-hidden' : 'hidden'}>
-          <DashboardView
-            mcvraUrl={mcvraUrl}
-            setMcvraUrl={setMcvraUrl}
-            chatbotUrl={chatbotUrl}
-            setChatbotUrl={setChatbotUrl}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            mcvraOnline={mcvraOnline}
-            chatbotOnline={chatbotOnline}
-            onRefreshHealth={pollHealth}
-          />
-        </div>
       </main>
 
       {/* Settings Modal Overlay */}
@@ -229,8 +205,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Floating AI Copilot Trigger Button (Bottom-Right, hidden on chatbot and mcvra tabs) */}
-      {!isChatDrawerOpen && activeTab !== 'chatbot' && activeTab !== 'mcvra' && (
+      {/* Floating AI Copilot Trigger Button (Bottom-Right, hidden on chatbot, mcvra, and scorecard tabs) */}
+      {!isChatDrawerOpen && activeTab !== 'chatbot' && activeTab !== 'mcvra' && activeTab !== 'scorecard' && (
         <button
           onClick={() => setIsChatDrawerOpen(true)}
           className="fixed bottom-20 right-6 z-40 bg-[#208661] hover:bg-[#1a6d4f] text-white shadow-xl shadow-[#208661]/25 px-4 py-3 rounded-full flex items-center gap-2.5 transition-all hover:scale-105 group border border-emerald-300/30"

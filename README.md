@@ -15,10 +15,16 @@ This is a pure [React 19](https://react.dev) single-page application powered by 
 - **Interactive MiniMap & Overview Navigator**: Interactive overview navigation panel with pannable viewport dragging, zoomable scroll, click-to-center coordinate navigation, direct node selection jumping, and top-left pillar type filter buttons to instantly focus criteria, metrics, questions, or raster nodes.
 - **MCVRA Graph Copilot Drawer**: Interactive conversational assistant (`McvraChatDrawer`) integrated directly with the active MCVRA graph to re-arrange node positions in real-time, inspect calculation formulas, trace attached components and children, and summarize graph statistics.
 - **Floating AI Chat Copilot Drawer**: Slide-over AI Assistant drawer (`FloatingChatDrawer`) accessible across all views with real-time SSE streaming, Markdown rendering, RAG source inspection, `#208661` message bubbles, and quick prompt chips.
-- **Scorecard Editor & Visualization**: Comprehensive visual dashboard designer and reviewer workspace for generated MCVRA risk indicators. Features:
-  - Drag-and-drop component palette (Containers, KPI Cards, Charts, Tables, Headings, Text, Embed Links, and Images).
-  - Vega-Lite interactive chart rendering (bar charts, line trends, scatter plots, distributions) with responsive containers.
-  - Live Inspector property editing for cards, chart specifications, column formatting, and container flex/grid layouts.
+- **Scorecard Visual Editor Powered by Puck**: Comprehensive visual dashboard designer and reviewer workspace for generated MCVRA risk indicators using `@puckeditor/core`. Features:
+  - Supports the 3-section scorecard architecture:
+    1. **Profile**: Facility overview card, field survey attributes (`AdditionalInfo`), and geospatial boundary visualizer (`Map`).
+    2. **Scores & Breakdown**: Executive summary `KpiCard`s, per-pillar breakdowns, indicator distribution `Chart`s, and detailed `Table`s.
+    3. **Interpretation**: Qualitative narrative synthesizing survey observations against the risk scores, identifying key vulnerability drivers and actionable mitigation recommendations.
+  - Native Puck visual drag-and-drop editor with categorized component drawers: Layout & Structure (`Grid`, `Flex`, `Spacer`), Typography (`Heading`, `Text`), Risk Data & Visuals (`KpiCard`, `Chart`, `Table`, `Map`, `AdditionalInfo`), UI Elements (`Card`, `Image`), and Media (`EmbedLink`).
+  - Standard A4 page layout (`794px × 1123px`), A3 layout, and fluid full-width modes with real-time responsive styling.
+  - Interactive property inspector with real-time field controls for cards, headings, text blocks, containers, map layers, and links.
+  - Vega-Lite interactive chart rendering (bar charts, grouped bars, line trends, radar distributions) with responsive containers.
+  - Bidirectional adapter between backend FastAPI recursive tree schema and Puck Data format with zero data loss.
   - Multi-version management with review status, semantic and structural validation, auto-drafting from active MCVRA graphs, and version history switching.
   - Seamless state persistence across tabs without re-rendering or state loss.
 - **Node Inspector**: Real-time parameter inspection, formula viewing, choices score mapping, and raw JSON export.
@@ -54,4 +60,5 @@ pnpm preview
 - `vega` (^6.4.0), `vega-embed` (^7.2.0), `vega-lite` (^6.4.3): High-performance declarative chart visualization engine.
 - `html-to-image` (^1.11.13): Canvas export snapshot engine.
 - `react-markdown` (^10.1.0): Markdown renderer for streaming chat responses.
+- `@puckeditor/core` (^0.23.0): Open-source drag-and-drop visual editor engine powering the Scorecard designer.
 - `lucide-react` (^1.33.0): Modern icon system.

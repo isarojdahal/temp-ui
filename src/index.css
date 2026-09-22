@@ -826,8 +826,8 @@ body,
   z-index: 3;
 }
 
-.scorecard-toolbar > div > span,
-.scorecard-toolbar > div > input + span {
+.scorecard-toolbar>div>span,
+.scorecard-toolbar>div>input+span {
   color: #718096;
 }
 
@@ -894,9 +894,9 @@ body,
   transition: opacity 140ms ease;
 }
 
-.scorecard-node:hover > .scorecard-node-toolbar,
-.scorecard-node:focus-within > .scorecard-node-toolbar,
-.scorecard-node-selected > .scorecard-node-toolbar {
+.scorecard-node:hover>.scorecard-node-toolbar,
+.scorecard-node:focus-within>.scorecard-node-toolbar,
+.scorecard-node-selected>.scorecard-node-toolbar {
   opacity: 1 !important;
 }
 
@@ -910,9 +910,9 @@ body,
   transition: max-height 160ms ease, opacity 160ms ease, padding 160ms ease;
 }
 
-.scorecard-container:hover > .scorecard-end-drop-zone,
-.scorecard-container:focus-within > .scorecard-end-drop-zone,
-.scorecard-container-selected > .scorecard-end-drop-zone {
+.scorecard-container:hover>.scorecard-end-drop-zone,
+.scorecard-container:focus-within>.scorecard-end-drop-zone,
+.scorecard-container-selected>.scorecard-end-drop-zone {
   max-height: 44px;
   min-height: 0;
   padding: 10px !important;
@@ -1018,7 +1018,7 @@ body,
     gap: 8px;
   }
 
-  .app-header-rich > .nav-tabs-rich {
+  .app-header-rich>.nav-tabs-rich {
     min-width: 0;
     flex: 1 1 auto;
     max-width: none;
@@ -1027,17 +1027,17 @@ body,
     scrollbar-width: none;
   }
 
-  .app-header-rich > .nav-tabs-rich::-webkit-scrollbar {
+  .app-header-rich>.nav-tabs-rich::-webkit-scrollbar {
     display: none;
   }
 
-  .app-header-rich > .nav-tabs-rich button {
+  .app-header-rich>.nav-tabs-rich button {
     flex: 0 0 36px;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
   }
 
-  .app-header-rich > .nav-tabs-rich button span {
+  .app-header-rich>.nav-tabs-rich button span {
     display: none;
   }
 
@@ -1076,11 +1076,11 @@ body,
     padding: 12px !important;
   }
 
-  .scorecard-toolbar > div {
+  .scorecard-toolbar>div {
     width: 100%;
   }
 
-  .scorecard-toolbar > div > input {
+  .scorecard-toolbar>div>input {
     width: 100% !important;
   }
 
@@ -1096,7 +1096,7 @@ body,
     padding: 12px !important;
   }
 
-  .scorecard-container-root > div {
+  .scorecard-container-root>div {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
@@ -1113,9 +1113,54 @@ body,
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .scorecard-kpi-card,
   .scorecard-container,
   .scorecard-table tbody tr {
     transition: none;
   }
+}
+
+/* ==========================================================================
+   SCORECARD PUCK GRID & FLEX DROPZONE FULL-WIDTH / FLEX-WRAP SYSTEM
+   ========================================================================== */
+
+.scorecard-grid-dropzone {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+  align-items: stretch !important;
+}
+
+.scorecard-grid-dropzone>* {
+  flex: 1 1 var(--grid-item-basis, calc(50% - 12px));
+  min-width: var(--grid-item-min-width, 240px);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* When a container has only a single child, guarantee 100% full width */
+.scorecard-grid-dropzone>*:only-child {
+  flex: 1 1 100% !important;
+  flex-basis: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.scorecard-flex-dropzone {
+  display: flex !important;
+  width: 100% !important;
+}
+
+.scorecard-flex-dropzone>* {
+  flex: 1 1 auto;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.scorecard-flex-dropzone>*:only-child {
+  flex: 1 1 100% !important;
+  width: 100% !important;
 }
