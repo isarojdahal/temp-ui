@@ -10,6 +10,25 @@ export function generateId(prefix = 'node') {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}-${Date.now().toString(36)}`;
 }
 
+function normalizeAdditionalInfoItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return { key: '', value: String(item ?? '') };
+    }
+    if (item.key != null || item.name != null || item.label != null) {
+      return {
+        key: String(item.key || item.name || item.label || ''),
+        value: item.value ?? item.val ?? '',
+      };
+    }
+    const entries = Object.entries(item).filter(([field]) => field !== 'id');
+    if (!entries.length) return { key: '', value: '' };
+    const [key, value] = entries[0];
+    return { key, value: value ?? '' };
+  });
+}
+
 /**
  * Converts a backend ScorecardDocument into Puck's Data format.
  */
@@ -33,6 +52,10 @@ export function treeToPuckData(document) {
     const isContainer = node.type === 'Grid' || node.type === 'Flex';
     const id = node.id || generateId(node.type?.toLowerCase() || 'item');
     const rawProps = { ...(node.props || {}) };
+
+    if (node.type === 'AdditionalInfo') {
+      rawProps.items = normalizeAdditionalInfoItems(rawProps.items);
+    }
 
     // Normalize KpiCard and Card scale array -> scaleMin / scaleMax for friendlier Puck fields
     if ((node.type === 'KpiCard' || node.type === 'Card') && Array.isArray(rawProps.scale)) {
@@ -63,6 +86,7 @@ export function treeToPuckData(document) {
     layout_size: layoutSize,
     layout: rootNode.type === 'Grid' ? `grid-${rootNode.props?.columns || 1}` : 'flex',
     gap: rootNode.props?.gap ?? 14,
+    language: document.language || 'en',
   };
 
   if (isTopContainer && Array.isArray(rootNode.children)) {
@@ -139,9 +163,7 @@ export function puckDataToTree(puckData, rootId = 'root', defaultTitle = 'Risk S
     }
 
     if (item.type === 'AdditionalInfo') {
-      if (!Array.isArray(cleanProps.items)) {
-        cleanProps.items = [];
-      }
+      cleanProps.items = normalizeAdditionalInfoItems(cleanProps.items);
     }
 
     let children = null;
@@ -165,6 +187,7 @@ export function puckDataToTree(puckData, rootId = 'root', defaultTitle = 'Risk S
     title: rootProps.title || defaultTitle,
     layout_size: layoutSize,
     layout: layoutSize,
+    language: rootProps.language || 'en',
     root: {
       id: rootId,
       type: isGrid ? 'Grid' : 'Flex',

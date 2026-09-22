@@ -13,6 +13,12 @@ export async function generateScorecard(baseUrl = DEFAULT_SCORECARD_URL, payload
   return res.data;
 }
 
+export const SCORECARD_LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'ne', label: 'Nepali' },
+  { value: 'hi', label: 'Hindi' },
+];
+
 export async function fetchScorecard(baseUrl = DEFAULT_SCORECARD_URL, assessmentId, { domain, userId, versionType } = {}) {
   const res = await axios.get(`${baseUrl}/scorecard/${encodeURIComponent(assessmentId)}`, {
     params: { domain, user_id: userId, version_type: versionType },

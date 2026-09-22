@@ -27,6 +27,41 @@ const STATUS_COLORS = {
 
 const TREND_ICON = { up: TrendingUp, down: TrendingDown, flat: MinusIcon };
 
+const STATUS_LABELS = {
+  en: { low: 'Low', moderate: 'Moderate', high: 'High', critical: 'Critical' },
+  ne: { low: 'न्यून', moderate: 'मध्यम', high: 'उच्च', critical: 'गम्भीर' },
+  hi: { low: 'न्यून', moderate: 'मध्यम', high: 'उच्च', critical: 'गंभीर' },
+};
+
+const SCORECARD_BADGE = {
+  en: 'Risk Scorecard',
+  ne: 'जोखिम स्कोरकार्ड',
+  hi: 'जोखिम स्कोरकार्ड',
+};
+
+function resolveLanguage(puck, languageProp) {
+  return languageProp || puck?.metadata?.language || 'en';
+}
+
+function statusLabel(status, language) {
+  const labels = STATUS_LABELS[language] || STATUS_LABELS.en;
+  return labels[status] || status;
+}
+
+function additionalInfoEntries(items = []) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => {
+    if (!item || typeof item !== 'object') return { key: '', value: String(item ?? '') };
+    if (item.key != null || item.name != null || item.label != null) {
+      return { key: item.key || item.name || item.label || '', value: item.value ?? '' };
+    }
+    const entries = Object.entries(item).filter(([field]) => field !== 'id');
+    if (!entries.length) return { key: '', value: '' };
+    const [key, value] = entries[0];
+    return { key, value: value ?? '' };
+  });
+}
+
 export const puckConfig = {
   categories: {
     layout: {
@@ -72,6 +107,7 @@ export const puckConfig = {
           { label: '1 Column Vertical Stack', value: 'flex' },
         ],
       },
+      language: { type: 'text', label: 'Document Language' },
       gap: { type: 'number', label: 'Cell Gap (px)', min: 0, max: 64 },
     },
     defaultProps: {
@@ -79,8 +115,9 @@ export const puckConfig = {
       layout_size: 'a4',
       layout: 'grid-1',
       gap: 14,
+      language: 'en',
     },
-    render: ({ children, title, layout = 'grid-1', layout_size = 'a4', gap = 14 }) => {
+    render: ({ children, title, layout = 'grid-1', layout_size = 'a4', gap = 14, language = 'en' }) => {
       const isGrid = layout.startsWith('grid');
       const cols = layout === 'grid-3' ? 3 : layout === 'grid-2' ? 2 : 1;
       const sizeClasses = {
@@ -93,6 +130,7 @@ export const puckConfig = {
         <div className="puck-canvas-wrapper w-full py-6 px-4 flex justify-center bg-slate-100/70 min-h-full overflow-y-auto">
           <div
             className={`puck-scorecard-doc w-full bg-white rounded-xl p-6 md:p-8 transition-all relative ${sizeClasses}`}
+            lang={language}
             style={
               isGrid && cols > 1
                 ? {
@@ -279,14 +317,16 @@ export const puckConfig = {
         level: 2,
         align: 'left',
       },
-      render: ({ content = 'Section Heading', level = 2, align = 'left' }) => {
+      render: ({ content = 'Section Heading', level = 2, align = 'left', puck }) => {
+        const language = resolveLanguage(puck);
+        const badge = SCORECARD_BADGE[language] || SCORECARD_BADGE.en;
         if (level === 1) {
           return (
             <div className="w-full col-span-full pb-3 mb-3.5 border-b border-slate-200/90">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#208661] bg-[#e9f3f0] px-2 py-0.5 rounded-full inline-flex items-center gap-1 border border-[#63ab91]/30">
+                <span className="text-[9px] font-bold tracking-widest text-[#208661] bg-[#e9f3f0] px-2 py-0.5 rounded-full inline-flex items-center gap-1 border border-[#63ab91]/30">
                   <ShieldCheck size={11} className="text-[#208661]" />
-                  Risk Scorecard
+                  {badge}
                 </span>
               </div>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-snug mt-1.5" style={{ textAlign: align }}>
@@ -300,7 +340,7 @@ export const puckConfig = {
           return (
             <div className="w-full col-span-full pt-2 pb-1 mb-2.5 flex items-center gap-2">
               <span className="w-1.5 h-3.5 bg-[#208661] rounded-full inline-block shrink-0" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800" style={{ textAlign: align }}>
+              <h2 className="text-xs font-bold tracking-wider text-slate-800" style={{ textAlign: align }}>
                 {content || <span className="text-slate-300 italic">Section Title</span>}
               </h2>
             </div>
@@ -308,7 +348,7 @@ export const puckConfig = {
         }
 
         const Tag = `h${level}`;
-        const sizeClass = level === 3 ? 'text-xs font-bold text-slate-700' : 'text-[11px] font-semibold text-slate-500 uppercase tracking-wide';
+        const sizeClass = level === 3 ? 'text-xs font-bold text-slate-700' : 'text-[11px] font-semibold text-slate-500 tracking-wide';
         return (
           <div className="w-full col-span-full py-0.5 mb-2">
             <Tag
@@ -405,13 +445,14 @@ export const puckConfig = {
         trend: 'flat',
         unit: '%',
       },
-      render: ({ label = 'Indicator', value = 0, scaleMin = 0, scaleMax = 100, status = 'moderate', trend = 'flat', unit = '' }) => {
+      render: ({ label = 'Indicator', value = 0, scaleMin = 0, scaleMax = 100, status = 'moderate', trend = 'flat', unit = '', puck }) => {
         const colors = STATUS_COLORS[status] || STATUS_COLORS.moderate;
         const TrendIcon = TREND_ICON[trend] || MinusIcon;
         const lo = Number(scaleMin) || 0;
         const hi = Number(scaleMax) || 100;
         const numVal = Number(value) || 0;
         const pct = hi > lo ? Math.max(0, Math.min(100, ((numVal - lo) / (hi - lo)) * 100)) : 0;
+        const language = resolveLanguage(puck);
 
         return (
           <div
@@ -420,13 +461,13 @@ export const puckConfig = {
           >
             <div className="flex items-start justify-between gap-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight truncate">{label}</span>
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider leading-tight truncate">{label}</span>
               </div>
               <span
-                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide shrink-0"
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide shrink-0"
                 style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
               >
-                {status}
+                {statusLabel(status, language)}
               </span>
             </div>
             <div className="scorecard-kpi-value flex items-baseline gap-1 mt-1.5">
@@ -460,30 +501,30 @@ export const puckConfig = {
             { label: 'Radar Chart', value: 'radar' },
           ],
         },
+        xField: { type: 'text', label: 'X Field' },
+        yField: { type: 'text', label: 'Y Field' },
       },
       defaultProps: {
         title: 'Indicator Scores',
         chartType: 'bar',
+        xField: 'indicator',
+        yField: 'score',
+        data: [],
       },
-      render: ({ title = 'Indicator Scores', vegaLiteSpec, data, chartType = 'bar' }) => {
+      render: ({ title = 'Indicator Scores', vegaLiteSpec, data, chartType = 'bar', xField, yField }) => {
+        const xKey = xField || 'indicator';
+        const yKey = yField || 'score';
+        const rows = Array.isArray(data) && data.length ? data : [];
         const fallbackSpec = vegaLiteSpec || {
           $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
           title: title,
           width: 'container',
           height: 170,
-          data: {
-            values: Array.isArray(data) && data.length
-              ? data
-              : [
-                { name: 'Hazard', score: 45 },
-                { name: 'Vulnerability', score: 62 },
-                { name: 'Exposure', score: 38 },
-              ],
-          },
+          data: { values: rows },
           mark: { type: chartType === 'line' ? 'line' : 'bar', cornerRadiusTopLeft: 4, cornerRadiusTopRight: 4 },
           encoding: {
-            x: { field: 'name', type: 'nominal', axis: { labelAngle: -25 } },
-            y: { field: 'score', type: 'quantitative' },
+            x: { field: xKey, type: 'nominal', axis: { labelAngle: -25 } },
+            y: { field: yKey, type: 'quantitative' },
             color: { value: '#208661' },
           },
         };
@@ -492,8 +533,8 @@ export const puckConfig = {
           <div className="scorecard-chart w-full col-span-full rounded-xl border border-slate-200/80 bg-white p-3.5 text-left shadow-2xs flex flex-col justify-between">
             {title && (
               <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100">
-                <h4 className="text-xs font-bold text-slate-800 tracking-wide uppercase truncate">{title}</h4>
-                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">{chartType}</span>
+                <h4 className="text-xs font-bold text-slate-800 tracking-wide truncate">{title}</h4>
+                <span className="text-[9px] font-semibold text-slate-400 tracking-wider shrink-0">{chartType}</span>
               </div>
             )}
             <div className="w-full">
@@ -511,17 +552,13 @@ export const puckConfig = {
       },
       defaultProps: {
         title: 'Risk Indicators Breakdown',
-        columns: ['Indicator', 'Score', 'Scale', 'Unit'],
-        rows: [
-          ['Flood Zone Status', '24.0', '0 – 30', '%'],
-          ['Distance to River', '18.0', '0 – 30', '%'],
-          ['Structural Integrity', '12.0', '0 – 35', '%'],
-        ],
+        columns: [],
+        rows: [],
       },
-      render: ({ title, columns = ['Indicator', 'Score'], rows = [] }) => (
+      render: ({ title, columns = [], rows = [] }) => (
         <div className="scorecard-table w-full col-span-full rounded-xl border border-slate-200/80 bg-white overflow-hidden text-left shadow-2xs flex flex-col justify-between">
           {title && (
-            <div className="px-3.5 py-2 text-xs font-bold text-slate-800 border-b border-slate-100 bg-slate-50/60 tracking-wide uppercase">
+            <div className="px-3.5 py-2 text-xs font-bold text-slate-800 border-b border-slate-100 bg-slate-50/60 tracking-wide">
               <span>{title}</span>
             </div>
           )}
@@ -530,7 +567,7 @@ export const puckConfig = {
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
                   {columns.map((c, i) => (
-                    <th key={i} className="text-left px-3 py-1.5 font-bold uppercase tracking-wider text-[9px] whitespace-nowrap">
+                    <th key={i} className="text-left px-3 py-1.5 font-bold tracking-wider text-[9px] whitespace-nowrap">
                       {c}
                     </th>
                   ))}
@@ -565,33 +602,37 @@ export const puckConfig = {
       label: 'Additional Info / Attributes',
       fields: {
         title: { type: 'text', label: 'Section Title' },
+        items: {
+          type: 'array',
+          label: 'Attributes',
+          arrayFields: {
+            key: { type: 'text', label: 'Label' },
+            value: { type: 'text', label: 'Value' },
+          },
+        },
       },
       defaultProps: {
         title: 'Facility & Survey Profile Attributes',
-        items: [
-          { key: 'Facility Name', value: 'Nilgunj Primary Health Center' },
-          { key: 'Facility Type', value: 'Primary Health Clinic' },
-          { key: 'Hazard Assessed', value: 'Monsoon Riverine Flood' },
-          { key: 'Location / District', value: 'Chitwan District, Ward 4' },
-        ],
+        items: [],
       },
       render: ({ title = 'Additional Information', items = [] }) => {
+        const entries = additionalInfoEntries(items);
         return (
           <div className="scorecard-additional-info w-full col-span-full rounded-xl border border-slate-200/80 bg-white p-3.5 text-left shadow-2xs">
             <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-slate-100">
-              <h4 className="text-xs font-bold text-slate-800 tracking-wide uppercase">{title}</h4>
+              <h4 className="text-xs font-bold text-slate-800 tracking-wide">{title}</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {(!items || items.length === 0) ? (
+              {entries.length === 0 ? (
                 <p className="text-xs text-slate-400 italic col-span-full">No attributes defined</p>
               ) : (
-                items.map((item, idx) => (
+                entries.map((item, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg bg-slate-50/80 border border-slate-100/90 hover:bg-slate-100/70 transition-colors"
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-medium text-slate-600 text-[11px] truncate">{item.key || item.name}</span>
+                      <span className="font-medium text-slate-600 text-[11px] truncate">{item.key}</span>
                     </div>
                     <span className="text-[11px] font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200/70 shadow-2xs shrink-0">
                       {String(item.value ?? '-')}
@@ -698,19 +739,20 @@ export const puckConfig = {
       },
       defaultProps: {
         title: 'Facility Overview',
-        content: 'Primary Health Clinic evaluated for hazard exposure and structural vulnerability.',
-        label: 'Assessment Target',
+        content: '',
+        label: '',
         icon: 'none',
         status: 'moderate',
         value: null,
       },
-      render: ({ title = 'Card Title', content = '', label = '', icon = 'none', status = 'moderate', value = null, unit = '', scaleMin = 0, scaleMax = 100 }) => {
+      render: ({ title = 'Card Title', content = '', label = '', icon = 'none', status = 'moderate', value = null, unit = '', scaleMin = 0, scaleMax = 100, puck }) => {
         const colors = STATUS_COLORS[status] || STATUS_COLORS.moderate;
         const hasMetric = value !== null && value !== undefined && value !== '';
         const numVal = Number(value) || 0;
         const lo = Number(scaleMin) || 0;
         const hi = Number(scaleMax) || 100;
         const pct = hi > lo ? Math.max(0, Math.min(100, ((numVal - lo) / (hi - lo)) * 100)) : 0;
+        const language = resolveLanguage(puck);
 
         const CARD_ICONS = {
           building: Building2,
@@ -740,16 +782,16 @@ export const puckConfig = {
                     </div>
                   )}
                   {label ? (
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                    <span className="text-[9px] font-bold text-slate-400 tracking-widest truncate">
                       {label}
                     </span>
                   ) : null}
                 </div>
                 <span
-                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide shrink-0"
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide shrink-0"
                   style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
                 >
-                  {status}
+                  {statusLabel(status, language)}
                 </span>
               </div>
               {title && <h3 className="text-sm font-bold text-slate-900 mb-1 leading-snug tracking-tight">{title}</h3>}

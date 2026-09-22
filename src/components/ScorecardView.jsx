@@ -28,6 +28,7 @@ import {
   fetchScorecardVersions,
   fetchScorecardVersion,
   deleteScorecardVersions,
+  SCORECARD_LANGUAGES,
 } from '../utils/scorecardApi';
 import { DEFAULT_SCORECARD_URL } from '../utils/api';
 import { extractIndicatorsFromGraph, extractOverallRiskFromIndicators } from '../utils/mcvraToScorecard';
@@ -142,6 +143,7 @@ export function ScorecardView({
   const [hazardType, setHazardType] = useState('Monsoon Riverine Flood');
   const [assessmentDate, setAssessmentDate] = useState('2026-09-22');
   const [layoutSize, setLayoutSize] = useState('a4');
+  const [language, setLanguage] = useState('en');
   const [recommendation, setRecommendation] = useState('Reinforce drainage near the east wing and elevate emergency supplies before monsoon peak.');
 
   // MCVRA Graph & Indicators (Compulsory Payload 2)
@@ -156,6 +158,7 @@ export function ScorecardView({
   const [document, setDocument] = useState(null);
   const [rootNodeId, setRootNodeId] = useState('root');
   const [puckData, setPuckData] = useState(null);
+  const [puckEditorKey, setPuckEditorKey] = useState(0);
 
   // History & versions
   const [versions, setVersions] = useState([]);
@@ -204,6 +207,7 @@ export function ScorecardView({
     setHazardType('Monsoon Riverine Flood');
     setAssessmentDate('2026-09-22');
     setLayoutSize('a4');
+    setLanguage('en');
     setOverallScore(68.5);
     setRecommendation('Reinforce drainage near the east wing and elevate emergency supplies before monsoon peak.');
     setSurveyItems(DEFAULT_SURVEY_ITEMS);
@@ -377,7 +381,9 @@ export function ScorecardView({
           persist: false,
           bbox: [80.0, 26.0, 88.0, 30.0],
           recommendation,
+          language,
         },
+        language,
         mcvra_graph_json_with_scores: {
           overall_score: parsedOverallScore ?? (indicators.length ? roundPercentage(extractOverallRiskFromIndicators(indicators)) : 68.5),
           overall_scale: [0.0, 100.0],
@@ -412,10 +418,12 @@ export function ScorecardView({
       const res = await generateScorecard(activeScorecardUrl, payload);
       setDocument(res.document);
 
-      // Convert generated backend document tree into Puck editor format
+      // Convert generated backend document tree into Puck editor format.
+      // Puck treats `data` as initial-only, so remount the editor after each generate.
       const { rootId, puckData: generatedPuckData } = treeToPuckData(res.document);
       setRootNodeId(rootId);
       setPuckData(generatedPuckData);
+      setPuckEditorKey((key) => key + 1);
 
       setWarnings(res.warnings || []);
       setStatusMessage('Scorecard generated with Profile, Scores, and Interpretation sections loaded into Puck Editor.');
@@ -449,6 +457,7 @@ export function ScorecardView({
         const { rootId, puckData: savedPuckData } = treeToPuckData(res.document);
         setRootNodeId(rootId);
         setPuckData(savedPuckData);
+        setPuckEditorKey((key) => key + 1);
         setWarnings(res.warnings || []);
         setStatusMessage('Scorecard saved successfully as a new reviewed version.');
         refreshVersions();
@@ -470,6 +479,7 @@ export function ScorecardView({
       const { rootId, puckData: loadedPuckData } = treeToPuckData(res.document);
       setRootNodeId(rootId);
       setPuckData(loadedPuckData);
+      setPuckEditorKey((key) => key + 1);
       setErrors([]);
       setStatusMessage(`Loaded version ${res.document.version} (${res.document.version_type}) into Puck Editor.`);
     } catch (err) {
@@ -631,6 +641,21 @@ export function ScorecardView({
                   </select>
                 </label>
               </div>
+
+              <label className="block">
+                <span className="block text-[10px] font-semibold text-slate-500 mb-0.5">Scorecard Language</span>
+                <select
+                  className="input-rich text-[11px] py-1.5 bg-white"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                >
+                  {SCORECARD_LANGUAGES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           )}
 
@@ -907,8 +932,10 @@ export function ScorecardView({
         <div className="puck-editor-container flex-1 min-h-0 h-full w-full overflow-hidden relative">
           {puckData ? (
             <Puck
+              key={puckEditorKey}
               config={puckConfig}
               data={puckData}
+              metadata={{ language: puckData?.root?.props?.language || language }}
               onChange={setPuckData}
               onPublish={handleSave}
               iframe={{ enabled: false }}

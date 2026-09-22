@@ -1164,3 +1164,7 @@ body,
   flex: 1 1 100% !important;
   width: 100% !important;
 }
+
+.puck-scorecard-doc {
+  font-family: Inter, "Noto Sans Devanagari", "Nirmala UI", Mangal, "Kohinoor Devanagari", system-ui, sans-serif;
+}
