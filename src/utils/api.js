@@ -35,6 +35,108 @@ export async function checkChatbotHealth(baseUrl = DEFAULT_CHATBOT_URL) {
   }
 }
 
+function buildMcvraGenerateFormData({
+  prompt,
+  frameworkId,
+  file,
+  facilityType,
+  assessmentType,
+  surveyFileColumnNames,
+  assessmentId,
+  domain,
+  userId,
+  stream,
+}) {
+  const formData = new FormData();
+  if (file) formData.append('file', file);
+  if (prompt) formData.append('prompt', prompt);
+
+  const facility = facilityType || frameworkId || 'health_facility';
+  const assessment = assessmentType || 'flood';
+  formData.append('facility_type', facility);
+  formData.append('assessment_type', assessment);
+
+  const defaultCols = [
+    {
+      file_id: 'file_01',
+      file_name: 'health_facility_survey.xlsx',
+      sheets: [
+        {
+          name: 'sheet_name',
+          columns: [
+            {
+              name: 'flood_zone_status',
+              datatype: 'boolean',
+              description: 'Yes=1  No=0'
+            }
+          ]
+        },
+        {
+          name: 'sheet_name2',
+          columns: [
+            {
+              name: 'flood_zone_status2',
+              datatype: 'boolean',
+              description: 'Yes=1  No=0'
+            }
+          ]
+        }
+      ]
+    }
+  ];
+
+  let rawCols = surveyFileColumnNames;
+  let parsedCols = [];
+
+  if (typeof rawCols === 'string' && rawCols.trim()) {
+    const trimmed = rawCols.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        parsedCols = JSON.parse(trimmed);
+      } catch (e) {
+        parsedCols = [];
+      }
+    } else {
+      parsedCols = [
+        {
+          file_id: 'file_01',
+          file_name: 'survey.xlsx',
+          sheets: [
+            {
+              name: 'sheet_name',
+              columns: trimmed
+                .split(',')
+                .map((c) => c.trim())
+                .filter(Boolean)
+                .map((colName) => ({
+                  name: colName,
+                  column_name: colName,
+                  datatype: 'categorical',
+                  data_type: 'categorical',
+                  description: ''
+                }))
+            }
+          ]
+        }
+      ];
+    }
+  } else if (Array.isArray(rawCols)) {
+    parsedCols = rawCols;
+  }
+
+  const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
+  formData.append('survey_file_column_names', JSON.stringify(cols));
+
+  if (assessmentId) formData.append('assessment_id', assessmentId);
+  if (domain) formData.append('domain', domain);
+  if (userId) formData.append('user_id', userId);
+  if (stream !== undefined && stream !== null) {
+    formData.append('stream', stream ? 'true' : 'false');
+  }
+
+  return formData;
+}
+
 // MCVRA Generator endpoints
 export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   try {
@@ -52,63 +154,20 @@ export async function generateMcvraGraph(
   baseUrl = DEFAULT_MCVRA_URL,
   { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId, signal }
 ) {
-  const formData = new FormData();
-  if (file) formData.append('file', file);
-  if (prompt) formData.append('prompt', prompt);
+  const formData = buildMcvraGenerateFormData({
+    prompt,
+    frameworkId,
+    file,
+    facilityType,
+    assessmentType,
+    surveyFileColumnNames,
+    assessmentId,
+    domain,
+    userId,
+    stream: false,
+  });
 
-  const facility = facilityType || frameworkId || 'health_facility';
-  const assessment = assessmentType || 'flood';
-
-  const defaultCols = [
-    {
-      name: 'flood_zone_status',
-      datatype: 'boolean',
-      description: 'Yes=1  No=0'
-    },
-    {
-      name: 'school_closure_days',
-      datatype: 'range',
-      description: 'no_closure=0 ;  1 day = 0.3 ;  2–3 day =0.6 ;  4–7 day =0.8 ;  >7day =1'
-    }
-  ];
-
-  let rawCols = surveyFileColumnNames;
-  let parsedCols = [];
-
-  if (typeof rawCols === 'string' && rawCols.trim()) {
-    const trimmed = rawCols.trim();
-    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-      try {
-        parsedCols = JSON.parse(trimmed);
-      } catch (e) {
-        parsedCols = [];
-      }
-    } else {
-      parsedCols = trimmed
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .map((colName) => ({
-          name: colName,
-          column_name: colName,
-          datatype: 'categorical',
-          data_type: 'categorical',
-          description: ''
-        }));
-    }
-  } else if (Array.isArray(rawCols)) {
-    parsedCols = rawCols;
-  }
-
-  const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
-  const colsParam = encodeURIComponent(JSON.stringify(cols));
-
-  let url = `${baseUrl}/generate?facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
-  if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
-  if (domain) url += `&domain=${encodeURIComponent(domain)}`;
-  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
-
-  const res = await axios.post(url, formData, {
+  const res = await axios.post(`${baseUrl}/generate`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     signal,
   });
@@ -120,63 +179,20 @@ export async function generateMcvraGraphStream(
   { prompt, frameworkId, file, facilityType, assessmentType, surveyFileColumnNames, assessmentId, domain, userId, signal },
   onProgress
 ) {
-  const formData = new FormData();
-  if (file) formData.append('file', file);
-  if (prompt) formData.append('prompt', prompt);
+  const formData = buildMcvraGenerateFormData({
+    prompt,
+    frameworkId,
+    file,
+    facilityType,
+    assessmentType,
+    surveyFileColumnNames,
+    assessmentId,
+    domain,
+    userId,
+    stream: true,
+  });
 
-  const facility = facilityType || frameworkId || 'health_facility';
-  const assessment = assessmentType || 'flood';
-
-  const defaultCols = [
-    {
-      name: 'flood_zone_status',
-      datatype: 'boolean',
-      description: 'Yes=1  No=0'
-    },
-    {
-      name: 'school_closure_days',
-      datatype: 'range',
-      description: 'no_closure=0 ;  1 day = 0.3 ;  2–3 day =0.6 ;  4–7 day =0.8 ;  >7day =1'
-    }
-  ];
-
-  let rawCols = surveyFileColumnNames;
-  let parsedCols = [];
-
-  if (typeof rawCols === 'string' && rawCols.trim()) {
-    const trimmed = rawCols.trim();
-    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-      try {
-        parsedCols = JSON.parse(trimmed);
-      } catch (e) {
-        parsedCols = [];
-      }
-    } else {
-      parsedCols = trimmed
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .map((colName) => ({
-          name: colName,
-          column_name: colName,
-          datatype: 'categorical',
-          data_type: 'categorical',
-          description: ''
-        }));
-    }
-  } else if (Array.isArray(rawCols)) {
-    parsedCols = rawCols;
-  }
-
-  const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
-  const colsParam = encodeURIComponent(JSON.stringify(cols));
-
-  let url = `${baseUrl}/generate?stream=true&facility_type=${encodeURIComponent(facility)}&assessment_type=${encodeURIComponent(assessment)}&survey_file_column_names=${colsParam}`;
-  if (assessmentId) url += `&assessment_id=${encodeURIComponent(assessmentId)}`;
-  if (domain) url += `&domain=${encodeURIComponent(domain)}`;
-  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
-
-  const response = await fetch(url, {
+  const response = await fetch(`${baseUrl}/generate`, {
     method: 'POST',
     headers: {
       'Accept': 'text/event-stream',

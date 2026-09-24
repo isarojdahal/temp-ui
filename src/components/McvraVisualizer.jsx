@@ -128,14 +128,30 @@ function FlowViewer({
   const [surveyColumnsText, setSurveyColumnsText] = useState(
     JSON.stringify([
       {
-        name: "flood_zone_status",
-        datatype: "boolean",
-        description: "Yes=1  No=0"
-      },
-      {
-        name: "school_closure_days",
-        datatype: "range",
-        description: "no_closure=0 ;  1 day = 0.3 ;  2–3 day =0.6 ;  4–7 day =0.8 ;  >7day =1"
+        file_id: "file_01",
+        file_name: "health_facility_survey.xlsx",
+        sheets: [
+          {
+            name: "sheet_name",
+            columns: [
+              {
+                name: "flood_zone_status",
+                datatype: "boolean",
+                description: "Yes=1  No=0"
+              }
+            ]
+          },
+          {
+            name: "sheet_name2",
+            columns: [
+              {
+                name: "flood_zone_status2",
+                datatype: "boolean",
+                description: "Yes=1  No=0"
+              }
+            ]
+          }
+        ]
       }
     ], null, 2)
   );
@@ -594,14 +610,14 @@ function FlowViewer({
                   onChange={(e) => setSurveyColumnsText(e.target.value)}
                   onScroll={handleSurveyScroll}
                   onKeyDown={handleSurveyKeyDown}
-                  placeholder='[&#10;  {&#10;    "name": "flood_zone_status",&#10;    "datatype": "boolean"&#10;  }&#10;]'
+                  placeholder='[&#10;  {&#10;    "file_id": "file_01",&#10;    "file_name": "health_facility_survey.xlsx",&#10;    "sheets": [&#10;      { "name": "sheet_name", "columns": [{ "name": "flood_zone_status", "datatype": "boolean" }] }&#10;    ]&#10;  }&#10;]'
                   spellCheck={false}
                   className="relative z-10 w-full min-h-[360px] h-[380px] p-3 font-mono text-xs leading-[1.6] whitespace-pre-wrap break-words bg-transparent text-transparent caret-[#208661] selection:bg-[#208661]/25 selection:text-transparent resize-y focus:outline-none m-0 border-none block"
                   style={{ tabSize: 2 }}
                 />
               </div>
               <p className="text-[10px] text-slate-500 mt-1">
-                Specify survey dataset column names to map against assessment question indicators.
+                Specify survey files with worksheets and columns to map against assessment question indicators.
               </p>
             </div>
           </form>
