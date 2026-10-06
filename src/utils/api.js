@@ -1,11 +1,9 @@
 import axios from 'axios';
 
-export const DEFAULT_MCVRA_URL = 'http://localhost:8000';
-export const DEFAULT_SCORECARD_URL = 'http://localhost:8002';
-export const DEFAULT_CHATBOT_URL = 'http://localhost:8080';
-// Authentication must be supplied through the settings UI or a server-side
-// proxy. Never ship a production credential in the browser bundle.
-export const DEFAULT_RAG_TOKEN = '';
+export const DEFAULT_MCVRA_URL = import.meta.env.VITE_MCVRA_URL || 'http://localhost:10000';
+export const DEFAULT_SCORECARD_URL = import.meta.env.VITE_SCORECARD_URL || 'http://localhost:10001';
+export const DEFAULT_CHATBOT_URL = import.meta.env.VITE_CHATBOT_URL || 'http://localhost:8080';
+export const DEFAULT_RAG_TOKEN = import.meta.env.VITE_RAG_TOKEN || '';
 
 // Health checks
 export async function checkMcvraHealth(baseUrl = DEFAULT_MCVRA_URL) {
