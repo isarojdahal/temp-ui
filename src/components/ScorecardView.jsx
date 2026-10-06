@@ -15,6 +15,7 @@ import {
   ClipboardList,
   SlidersHorizontal,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import { Puck } from '@puckeditor/core';
 import '@puckeditor/core/dist/index.css';
@@ -155,19 +156,19 @@ export function ScorecardView({
   // Survey Column Name & Values (Compulsory Payload 3)
   const [surveyItems, setSurveyItems] = useState(DEFAULT_SURVEY_ITEMS);
 
-const INITIAL_PUCK_DATA = {
-  root: {
-    props: {
-      title: 'Risk Scorecard',
-      layout_size: 'a4',
-      layout: 'grid-1',
-      gap: 14,
-      language: 'en',
+  const INITIAL_PUCK_DATA = {
+    root: {
+      props: {
+        title: 'Risk Scorecard',
+        layout_size: 'a4',
+        layout: 'grid-1',
+        gap: 14,
+        language: 'en',
+      },
     },
-  },
-  content: [],
-  zones: {},
-};
+    content: [],
+    zones: {},
+  };
 
   // Puck Data & Backend Document state
   const [document, setDocument] = useState(null);
@@ -911,15 +912,15 @@ const INITIAL_PUCK_DATA = {
 
           <div className="flex-1" />
 
-          {/* AI Copilot Chat Drawer Trigger */}
+          {/* Chat Drawer Trigger */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsChatOpen(true)}
             className="gap-1.5 text-xs font-semibold text-[#208661] border-[#208661]/40 bg-[#e9f3f0] hover:bg-[#d8ece4] shadow-xs"
-            title="Open Scorecard AI Chat Assistant"
+            title="Open Scorecard Chat Assistant"
           >
-            <Sparkles size={14} className="text-[#208661]" /> AI Copilot
+            <MessageSquare size={14} className="text-[#208661]" /> Chat
           </Button>
 
           {document && (
