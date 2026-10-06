@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export const DEFAULT_MCVRA_URL = import.meta.env.VITE_MCVRA_URL || 'http://localhost:10000';
 export const DEFAULT_SCORECARD_URL = import.meta.env.VITE_SCORECARD_URL || 'http://localhost:10001';
-export const DEFAULT_CHATBOT_URL = import.meta.env.VITE_CHATBOT_URL || 'http://localhost:8080';
+export const DEFAULT_CHATBOT_URL = import.meta.env.VITE_CHATBOT_URL || 'http://localhost:10002';
 export const DEFAULT_RAG_TOKEN = import.meta.env.VITE_RAG_TOKEN || '';
 
 // Health checks
@@ -83,47 +83,53 @@ function buildMcvraGenerateFormData({
     }
   ];
 
-  let rawCols = surveyFileColumnNames;
-  let parsedCols = [];
+  let colsPayload = null;
 
-  if (typeof rawCols === 'string' && rawCols.trim()) {
-    const trimmed = rawCols.trim();
+  if (typeof surveyFileColumnNames === 'string' && surveyFileColumnNames.trim()) {
+    const trimmed = surveyFileColumnNames.trim();
     if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
       try {
-        parsedCols = JSON.parse(trimmed);
+        JSON.parse(trimmed);
+        colsPayload = trimmed;
       } catch (e) {
-        parsedCols = [];
+        colsPayload = null;
       }
     } else {
-      parsedCols = [
-        {
-          file_id: 'file_01',
-          file_name: 'survey.xlsx',
-          sheets: [
-            {
-              name: 'sheet_name',
-              columns: trimmed
-                .split(',')
-                .map((c) => c.trim())
-                .filter(Boolean)
-                .map((colName) => ({
-                  name: colName,
-                  column_name: colName,
-                  datatype: 'categorical',
-                  data_type: 'categorical',
-                  description: ''
-                }))
-            }
-          ]
-        }
-      ];
+      // Comma-separated list of column names
+      const cols = trimmed
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .map((colName) => ({
+          name: colName,
+          datatype: 'categorical',
+          description: ''
+        }));
+      if (cols.length > 0) {
+        colsPayload = JSON.stringify([
+          {
+            file_id: 'file_01',
+            file_name: 'survey.xlsx',
+            sheets: [
+              {
+                name: 'sheet_name',
+                columns: cols
+              }
+            ]
+          }
+        ]);
+      }
     }
-  } else if (Array.isArray(rawCols)) {
-    parsedCols = rawCols;
+  } else if (Array.isArray(surveyFileColumnNames) || (typeof surveyFileColumnNames === 'object' && surveyFileColumnNames !== null)) {
+    colsPayload = JSON.stringify(surveyFileColumnNames);
   }
 
-  const cols = (Array.isArray(parsedCols) && parsedCols.length > 0) ? parsedCols : defaultCols;
-  formData.append('survey_file_column_names', JSON.stringify(cols));
+  // Strictly provide survey columns for new generation; omit if cached replay
+  if (colsPayload) {
+    formData.append('survey_file_column_names', colsPayload);
+  } else if (file) {
+    formData.append('survey_file_column_names', JSON.stringify(defaultCols));
+  }
 
   if (assessmentId) formData.append('assessment_id', assessmentId);
   if (domain) formData.append('domain', domain);
@@ -138,7 +144,8 @@ function buildMcvraGenerateFormData({
 // MCVRA Generator endpoints
 export async function fetchMcvraFrameworks(baseUrl = DEFAULT_MCVRA_URL) {
   try {
-    const res = await axios.get(`${baseUrl}/mcda/frameworks`);
+    const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+    const res = await axios.get(`${cleanBaseUrl}/mcda/frameworks`);
     return res.data;
   } catch (e) {
     if (e?.response?.status !== 404) {
@@ -165,8 +172,8 @@ export async function generateMcvraGraph(
     stream: false,
   });
 
-  const res = await axios.post(`${baseUrl}/generate`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+  const res = await axios.post(`${cleanBaseUrl}/generate`, formData, {
     signal,
   });
   return res.data;
@@ -190,7 +197,8 @@ export async function generateMcvraGraphStream(
     stream: true,
   });
 
-  const response = await fetch(`${baseUrl}/generate`, {
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+  const response = await fetch(`${cleanBaseUrl}/generate`, {
     method: 'POST',
     headers: {
       'Accept': 'text/event-stream',
@@ -284,13 +292,15 @@ export async function chatWithMcvra(
     assessment_name: assessmentName,
     history: history || [],
     layout_options: layoutOptions || null,
+    stream: false,
   };
 
   if (graph) {
     payload.graph = Array.isArray(graph) ? graph : [graph];
   }
 
-  const res = await axios.post(`${baseUrl}/chat`, payload, {
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+  const res = await axios.post(`${cleanBaseUrl}/chat?stream=false`, payload, {
     headers: { 'Content-Type': 'application/json' },
     timeout: 60000,
   });
@@ -317,7 +327,8 @@ export async function chatWithMcvraStream(
     payload.graph = Array.isArray(graph) ? graph : [graph];
   }
 
-  const response = await fetch(`${baseUrl}/chat?stream=true`, {
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+  const response = await fetch(`${cleanBaseUrl}/chat?stream=true`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

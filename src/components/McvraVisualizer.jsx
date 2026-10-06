@@ -299,7 +299,7 @@ function FlowViewer({
     setError(null);
     setStreamProgress({
       step: 1,
-      total_steps: 7,
+      total_steps: 8,
       title: 'Initializing LangGraph Engine',
       description: 'Preparing facility framework and survey column schemas...',
       completedNodes: []
@@ -331,11 +331,11 @@ function FlowViewer({
             }
             return {
               step: progress.step || prev?.step || 1,
-              total_steps: progress.total_steps || 7,
+              total_steps: progress.total_steps || 8,
               title: progress.title || 'Processing Graph Node',
               description: progress.description || progress.message || 'Executing LangGraph agent...',
               completedNodes: completed,
-              currentNode: progress.current_node || (completed.length === 0 ? 'select_framework_and_generate_components' : null),
+              currentNode: progress.current_node || (completed.length === 0 ? 'validate_uploaded_framework_and_parse_framework_file_and_save_to_json' : null),
             };
           });
         }
@@ -544,17 +544,17 @@ function FlowViewer({
                   <option value="flood">Flood Risk</option>
                   <option value="heatwave">Heatwave</option>
                   <option value="drought">Drought</option>
-                  <option value="landslide">Landslides</option>
+                  <option value="landslides">Landslides</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Framework File (.xlsx / .csv)</label>
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Framework File (.xlsx / .csv / .json)</label>
               <div className="p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:border-[#208661] transition">
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.xls,.csv,.json"
                   onChange={(e) => setFile(e.target.files[0])}
                   className="w-full text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-[#e9f3f0] file:text-[#208661]"
                 />

@@ -44,6 +44,16 @@ npm run dev
 
 Open [http://localhost:3001](http://localhost:3001) with your browser to view the application.
 
+### Backend Microservices & Default Ports
+
+The frontend integrates with the Drishti AI suite running on non-conflicting 10000-series ports to avoid collision with `integrated-dastaa`:
+
+| Microservice | Default Port | Environment Variable | Payload Specification |
+|---|---|---|---|
+| **MCVRA Tree Generator** | `10000` | `VITE_MCVRA_URL` | `multipart/form-data` with `file` (.xlsx/.csv/.json), `facility_type`, `assessment_type`, and `survey_file_column_names` JSON string |
+| **Risk Scorecard Generator**| `10001` | `VITE_SCORECARD_URL` | `application/json` with 3-section indicator & metric payloads |
+| **Climate Assistant Chatbot**| `10002` | `VITE_CHATBOT_URL` | `application/json` with SSE streaming and RAG retrieval |
+
 ### Building for Production
 
 ```bash
