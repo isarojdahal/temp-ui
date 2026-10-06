@@ -8,9 +8,14 @@ export async function fetchScorecardRegistry(baseUrl = DEFAULT_SCORECARD_URL) {
   return res.data;
 }
 
-export async function generateScorecard(baseUrl = DEFAULT_SCORECARD_URL, payload) {
-  const res = await axios.post(`${baseUrl}/generate`, payload);
+export async function chatWithScorecard(baseUrl = DEFAULT_SCORECARD_URL, payload) {
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+  const res = await axios.post(`${cleanBaseUrl}/chat`, payload);
   return res.data;
+}
+
+export async function generateScorecard(baseUrl = DEFAULT_SCORECARD_URL, payload) {
+  return chatWithScorecard(baseUrl, payload);
 }
 
 export const SCORECARD_LANGUAGES = [

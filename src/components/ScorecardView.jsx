@@ -15,11 +15,13 @@ import {
   Building2,
   ClipboardList,
   SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { Puck } from '@puckeditor/core';
 import '@puckeditor/core/dist/index.css';
 
 import { Button } from './ui/button';
+import { ScorecardChatDrawer } from './ScorecardChatDrawer';
 import { puckConfig } from './scorecard/puckConfig';
 import { treeToPuckData, puckDataToTree, updatePuckDataScores } from '../utils/puckAdapter';
 import {
@@ -167,6 +169,40 @@ export function ScorecardView({
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Applies document returned by Chat Copilot into Puck visual editor
+  const handleApplyDocument = useCallback((newDoc, statusMsg) => {
+    if (!newDoc || !newDoc.root) return;
+    setDocument(newDoc);
+    if (newDoc.layout_size) setLayoutSize(newDoc.layout_size);
+    if (newDoc.language) setLanguage(newDoc.language);
+    if (newDoc.title) setAssessmentName(newDoc.title);
+    const { rootId, puckData: generatedPuckData } = treeToPuckData(newDoc);
+    setRootNodeId(rootId);
+    setPuckData(generatedPuckData);
+    setPuckEditorKey((k) => k + 1);
+    if (statusMsg) setStatusMessage(statusMsg);
+  }, []);
+
+  // Serializes live Puck editor state into tree document for Chat Copilot
+  const getCurrentDocument = useCallback(() => {
+    if (puckData && rootNodeId) {
+      try {
+        return puckDataToTree(puckData, rootNodeId, document || {
+          assessment_id: assessmentId,
+          domain,
+          user_id: userId,
+          title: assessmentName,
+          layout_size: layoutSize,
+          language,
+        });
+      } catch (e) {
+        return document;
+      }
+    }
+    return document;
+  }, [puckData, rootNodeId, document, assessmentId, domain, userId, assessmentName, layoutSize, language]);
 
   // Pulls indicators and profile from most recently generated MCVRA graph
   const syncFromMcvraGraph = useCallback(() => {
@@ -870,6 +906,17 @@ export function ScorecardView({
 
           <div className="flex-1" />
 
+          {/* AI Copilot Chat Drawer Trigger */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsChatOpen(true)}
+            className="gap-1.5 text-xs font-semibold text-[#208661] border-[#208661]/40 bg-[#e9f3f0] hover:bg-[#d8ece4] shadow-xs"
+            title="Open Scorecard AI Chat Assistant"
+          >
+            <Sparkles size={14} className="text-[#208661]" /> AI Copilot
+          </Button>
+
           {document && (
             <span
               className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${document.version_type === 'reviewed'
@@ -956,12 +1003,40 @@ export function ScorecardView({
                     {generating ? <RefreshCw size={14} className="animate-spin" /> : <Wand2 size={14} />}
                     Generate Scorecard
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsChatOpen(true)}
+                    className="gap-1.5 text-xs text-[#208661] border-[#208661]/40 hover:bg-[#e9f3f0]"
+                  >
+                    <Sparkles size={14} className="text-[#208661]" /> Ask AI Copilot
+                  </Button>
                 </div>
               </div>
             </div>
           )}
         </div>
       </main>
+
+      {/* Scorecard AI Copilot Chat Drawer */}
+      <ScorecardChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        scorecardUrl={activeScorecardUrl}
+        document={getCurrentDocument()}
+        assessmentId={assessmentId}
+        domain={domain}
+        userId={userId}
+        assessmentName={assessmentName}
+        facilityType={facilityType}
+        hazardType={hazardType}
+        layoutSize={layoutSize}
+        language={language}
+        indicators={indicators}
+        overallScore={overallScore}
+        surveyItems={surveyItems}
+        onApplyDocument={handleApplyDocument}
+      />
     </div>
   );
 }
