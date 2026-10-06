@@ -146,10 +146,10 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
             Number(row.score) >= 70
               ? 'critical'
               : Number(row.score) >= 50
-              ? 'high'
-              : Number(row.score) >= 30
-              ? 'moderate'
-              : 'low',
+                ? 'high'
+                : Number(row.score) >= 30
+                  ? 'moderate'
+                  : 'low',
         })),
       };
 
@@ -174,11 +174,11 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
         survey_col_name_and_values: Object.keys(surveyValues).length
           ? surveyValues
           : {
-              building_construction: 'Reinforced Concrete',
-              flood_barrier_present: 'No',
-              backup_power_elevated: 'Yes',
-              emergency_water_supply_days: 3,
-            },
+            building_construction: 'Reinforced Concrete',
+            flood_barrier_present: 'No',
+            backup_power_elevated: 'Yes',
+            emergency_water_supply_days: 3,
+          },
         assessment_id: assessmentId,
         domain,
         user_id: userId,
@@ -197,12 +197,12 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
         prev.map((msg) =>
           msg.id === assistantMsgId
             ? {
-                ...msg,
-                content: res?.reply || 'Scorecard processed successfully.',
-                has_updated_doc: hasUpdatedDoc,
-                updated_doc: returnedDoc,
-                isLoading: false,
-              }
+              ...msg,
+              content: res?.reply || 'Scorecard processed successfully.',
+              has_updated_doc: hasUpdatedDoc,
+              updated_doc: returnedDoc,
+              isLoading: false,
+            }
             : msg
         )
       );
@@ -227,10 +227,10 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
         prev.map((msg) =>
           msg.id === assistantMsgId
             ? {
-                ...msg,
-                content: `⚠️ **Error:** ${errMsg}`,
-                isLoading: false,
-              }
+              ...msg,
+              content: `⚠️ **Error:** ${errMsg}`,
+              isLoading: false,
+            }
             : msg
         )
       );
@@ -310,9 +310,8 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-3 text-xs leading-relaxed ${
-              msg.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            className={`flex gap-3 text-xs leading-relaxed ${msg.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
           >
             {msg.role !== 'user' && (
               <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#208661] border border-[#63ab91]/40 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
@@ -321,11 +320,10 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
             )}
 
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-xs space-y-2 ${
-                msg.role === 'user'
+              className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-xs space-y-2 ${msg.role === 'user'
                   ? 'bg-[#208661] text-white rounded-br-xs'
                   : 'bg-white border border-slate-200/90 text-slate-800 rounded-bl-xs'
-              }`}
+                }`}
             >
               <div className="prose prose-xs max-w-none text-inherit dark:prose-invert">
                 {msg.isLoading ? (
@@ -364,9 +362,8 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
               )}
 
               <div
-                className={`text-[10px] text-right font-medium ${
-                  msg.role === 'user' ? 'text-emerald-100' : 'text-slate-400'
-                }`}
+                className={`text-[10px] text-right font-medium ${msg.role === 'user' ? 'text-emerald-100' : 'text-slate-400'
+                  }`}
               >
                 {msg.timestamp}
               </div>
