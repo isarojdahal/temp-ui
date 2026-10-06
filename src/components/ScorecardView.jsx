@@ -156,10 +156,24 @@ export function ScorecardView({
   // Survey Column Name & Values (Compulsory Payload 3)
   const [surveyItems, setSurveyItems] = useState(DEFAULT_SURVEY_ITEMS);
 
+const INITIAL_PUCK_DATA = {
+  root: {
+    props: {
+      title: 'Risk Scorecard',
+      layout_size: 'a4',
+      layout: 'grid-1',
+      gap: 14,
+      language: 'en',
+    },
+  },
+  content: [],
+  zones: {},
+};
+
   // Puck Data & Backend Document state
   const [document, setDocument] = useState(null);
   const [rootNodeId, setRootNodeId] = useState('root');
-  const [puckData, setPuckData] = useState(null);
+  const [puckData, setPuckData] = useState(INITIAL_PUCK_DATA);
   const [puckEditorKey, setPuckEditorKey] = useState(0);
 
   // History & versions
@@ -977,44 +991,15 @@ export function ScorecardView({
 
         {/* Puck Visual Editor Workspace */}
         <div className="puck-editor-container flex-1 min-h-0 h-full w-full overflow-hidden relative">
-          {puckData ? (
-            <Puck
-              key={puckEditorKey}
-              config={puckConfig}
-              data={puckData}
-              metadata={{ language: puckData?.root?.props?.language || language }}
-              onChange={setPuckData}
-              onPublish={handleSave}
-              iframe={{ enabled: false }}
-            />
-          ) : (
-            <div className="h-full w-full flex flex-col items-center justify-center text-center px-6 bg-slate-50 text-slate-400">
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm max-w-md space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-[#e9f3f0] text-[#208661] flex items-center justify-center mx-auto">
-                  <LayoutDashboard size={24} />
-                </div>
-                <h3 className="text-base font-bold text-slate-900">Puck Visual Scorecard Editor</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Configure risk parameters in the left drawer and click <strong>Generate with Puck</strong>, or launch
-                  a default template to start designing right away.
-                </p>
-                <div className="pt-2 flex items-center justify-center gap-2">
-                  <Button variant="gradient" size="sm" onClick={handleGenerate} disabled={generating}>
-                    {generating ? <RefreshCw size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                    Generate Scorecard
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsChatOpen(true)}
-                    className="gap-1.5 text-xs text-[#208661] border-[#208661]/40 hover:bg-[#e9f3f0]"
-                  >
-                    <Sparkles size={14} className="text-[#208661]" /> Ask AI Copilot
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          <Puck
+            key={puckEditorKey}
+            config={puckConfig}
+            data={puckData || INITIAL_PUCK_DATA}
+            metadata={{ language: (puckData || INITIAL_PUCK_DATA)?.root?.props?.language || language }}
+            onChange={setPuckData}
+            onPublish={handleSave}
+            iframe={{ enabled: false }}
+          />
         </div>
       </main>
 
