@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Wand2,
   Save,
   Plus,
   Trash2,
@@ -891,14 +890,6 @@ const INITIAL_PUCK_DATA = {
               </Button>
             </div>
           )}
-        </div>
-
-        {/* Pinned Bottom Action: Generate Scorecard */}
-        <div className="p-3 border-t border-slate-200 bg-white shrink-0">
-          <Button variant="gradient" size="sm" className="w-full gap-2 shadow-xs" onClick={handleGenerate} disabled={generating}>
-            {generating ? <RefreshCw size={14} className="animate-spin" /> : <Wand2 size={14} />}
-            {generating ? 'Synthesizing Scorecard...' : 'Generate Scorecard'}
-          </Button>
         </div>
       </aside>
 
