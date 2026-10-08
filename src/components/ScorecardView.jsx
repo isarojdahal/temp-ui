@@ -912,16 +912,6 @@ export function ScorecardView({
 
           <div className="flex-1" />
 
-          {/* Chat Drawer Trigger */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsChatOpen(true)}
-            className="gap-1.5 text-xs font-semibold text-[#208661] border-[#208661]/40 bg-[#e9f3f0] hover:bg-[#d8ece4] shadow-xs cursor-pointer"
-            title="Open Scorecard AI Copilot Assistant"
-          >
-            <Sparkles size={14} className="text-[#208661]" /> Build with AI
-          </Button>
 
           {document && (
             <span
