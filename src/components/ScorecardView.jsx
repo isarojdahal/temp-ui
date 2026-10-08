@@ -989,11 +989,11 @@ export function ScorecardView({
               <button
                 type="button"
                 onClick={() => setIsChatOpen(true)}
-                className="pointer-events-auto flex items-center gap-3 rounded-full border border-[#208661]/40 bg-white/95 backdrop-blur-md px-8 py-3.5 text-sm sm:text-base font-semibold text-[#208661] shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all duration-200 hover:border-[#208661] hover:bg-[#e9f3f0] hover:shadow-[0_12px_36px_rgba(32,134,97,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer group"
+                className="pointer-events-auto flex items-center gap-3 rounded-full border border-[#208661]/40 bg-white/95 backdrop-blur-md px-8 py-4 min-h-[52px] text-sm sm:text-base font-semibold text-[#208661] shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all duration-200 hover:border-[#208661] hover:bg-[#e9f3f0] hover:shadow-[0_12px_36px_rgba(32,134,97,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer group"
                 title="Build or edit dashboard with AI Assistant"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#e9f3f0] group-hover:bg-[#208661] transition-colors">
-                  <Sparkles className="h-3.5 w-3.5 text-[#208661] group-hover:text-white transition-colors" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e9f3f0] group-hover:bg-[#208661] transition-colors">
+                  <Sparkles className="h-4 w-4 text-[#208661] group-hover:text-white transition-colors" />
                 </div>
                 <span className="tracking-wide">Build with AI</span>
               </button>
