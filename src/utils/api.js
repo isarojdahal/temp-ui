@@ -282,7 +282,21 @@ export async function generateMcvraGraphStream(
 
 export async function chatWithMcvra(
   baseUrl = DEFAULT_MCVRA_URL,
-  { message, graph, assessmentId, userId, assessmentName, domain, history, layoutOptions }
+  {
+    message,
+    graph,
+    assessmentId,
+    userId,
+    assessmentName,
+    domain,
+    history,
+    layoutOptions,
+    frameworkFileContent,
+    facilityType,
+    assessmentType,
+    surveyFileColumnNames,
+    surveyColumns,
+  }
 ) {
   const payload = {
     message,
@@ -292,6 +306,11 @@ export async function chatWithMcvra(
     assessment_name: assessmentName,
     history: history || [],
     layout_options: layoutOptions || null,
+    framework_file_content: frameworkFileContent || undefined,
+    facility_type: facilityType || undefined,
+    assessment_type: assessmentType || undefined,
+    survey_file_column_names: surveyFileColumnNames || undefined,
+    survey_columns: surveyColumns || undefined,
     stream: false,
   };
 
@@ -302,14 +321,29 @@ export async function chatWithMcvra(
   const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
   const res = await axios.post(`${cleanBaseUrl}/chat?stream=false`, payload, {
     headers: { 'Content-Type': 'application/json' },
-    timeout: 60000,
+    timeout: 120000,
   });
   return res.data;
 }
 
 export async function chatWithMcvraStream(
   baseUrl = DEFAULT_MCVRA_URL,
-  { message, graph, assessmentId, userId, assessmentName, domain, history, layoutOptions },
+  {
+    message,
+    graph,
+    assessmentId,
+    userId,
+    assessmentName,
+    domain,
+    history,
+    layoutOptions,
+    frameworkFileContent,
+    facilityType,
+    assessmentType,
+    surveyFileColumnNames,
+    surveyColumns,
+    signal,
+  },
   onChunk
 ) {
   const payload = {
@@ -320,6 +354,11 @@ export async function chatWithMcvraStream(
     assessment_name: assessmentName,
     history: history || [],
     layout_options: layoutOptions || null,
+    framework_file_content: frameworkFileContent || undefined,
+    facility_type: facilityType || undefined,
+    assessment_type: assessmentType || undefined,
+    survey_file_column_names: surveyFileColumnNames || undefined,
+    survey_columns: surveyColumns || undefined,
     stream: true,
   };
 
@@ -335,6 +374,7 @@ export async function chatWithMcvraStream(
       'Accept': 'text/event-stream',
     },
     body: JSON.stringify(payload),
+    signal,
   });
 
   if (!response.ok) {
@@ -373,6 +413,8 @@ export async function chatWithMcvraStream(
         if (onChunk) onChunk(eventData.delta, eventData);
       } else if (eventData.event === 'start') {
         if (onChunk) onChunk('', eventData);
+      } else if (eventData.event === 'progress') {
+        if (onChunk) onChunk('', eventData);
       } else if (eventData.event === 'complete') {
         finalResult = eventData;
         if (onChunk) onChunk('', eventData);
@@ -393,6 +435,7 @@ export async function chatWithMcvraStream(
         continue;
       }
       if (eventData?.event === 'complete') finalResult = eventData;
+      if (eventData?.event === 'progress' && onChunk) onChunk('', eventData);
       if (eventData?.event === 'error') throw new Error(`Chat streaming error: ${eventData.detail || 'Chat streaming error'}`);
     }
   }

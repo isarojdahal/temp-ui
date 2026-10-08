@@ -262,13 +262,13 @@ I can help you build, customize, and refine your risk scorecard dashboard in rea
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              Scorecard Chat
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/60 capitalize">
-                {document ? `Layout: ${document.layout_size || layoutSize || 'A4'}` : 'New Canvas'}
+              Build with AI
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-[#208661] border border-emerald-300/60 capitalize">
+                {document ? `Layout: ${document.layout_size || layoutSize || 'A4'}` : 'Live Dashboard'}
               </span>
             </h2>
             <p className="text-[11px] text-slate-500">
-              Generate, update layout, translate & customize scorecard dashboards
+              Drishti AI Scorecard Copilot
             </p>
           </div>
         </div>

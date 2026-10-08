@@ -917,10 +917,10 @@ export function ScorecardView({
             variant="outline"
             size="sm"
             onClick={() => setIsChatOpen(true)}
-            className="gap-1.5 text-xs font-semibold text-[#208661] border-[#208661]/40 bg-[#e9f3f0] hover:bg-[#d8ece4] shadow-xs"
-            title="Open Scorecard Chat Assistant"
+            className="gap-1.5 text-xs font-semibold text-[#208661] border-[#208661]/40 bg-[#e9f3f0] hover:bg-[#d8ece4] shadow-xs cursor-pointer"
+            title="Open Scorecard AI Copilot Assistant"
           >
-            <MessageSquare size={14} className="text-[#208661]" /> Chat
+            <Sparkles size={14} className="text-[#208661]" /> Build with AI
           </Button>
 
           {document && (
@@ -992,6 +992,21 @@ export function ScorecardView({
             onPublish={handleSave}
             iframe={{ enabled: false }}
           />
+
+          {/* Floating Build with AI Button (shown only when chat drawer is closed, matching integrated-tool-frontend UI/UX) */}
+          {!isChatOpen && (
+            <div className="pointer-events-none absolute bottom-6 left-1/2 z-30 -translate-x-1/2">
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(true)}
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#208661]/40 bg-white px-5 py-2.5 text-sm font-semibold text-[#208661] shadow-lg shadow-black/5 transition-all duration-200 hover:border-[#208661] hover:bg-[#e9f3f0] hover:shadow-xl active:scale-95 cursor-pointer"
+                title="Build or edit dashboard with AI Assistant"
+              >
+                <Sparkles className="h-4 w-4 text-[#208661]" />
+                <span className="tracking-wide">Build with AI</span>
+              </button>
+            </div>
+          )}
         </div>
       </main>
 

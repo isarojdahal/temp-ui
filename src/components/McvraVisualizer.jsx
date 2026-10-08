@@ -43,6 +43,7 @@ import { generateMcvraGraph, generateMcvraGraphStream } from '../utils/api';
 import { Button } from './ui/button';
 import { McvraChatDrawer } from './McvraChatDrawer';
 import { getGlobalConfig } from '../utils/config';
+import * as XLSX from 'xlsx';
 
 const edgeTypes = { curved: CurvedEdge };
 
@@ -157,10 +158,95 @@ function FlowViewer({
   );
   const [frameworkId, setFrameworkId] = useState('');
   const [file, setFile] = useState(null);
+  const [frameworkFileContent, setFrameworkFileContent] = useState(null);
+  const [frameworkFileName, setFrameworkFileName] = useState('');
+  const [frameworkRowCount, setFrameworkRowCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [streamProgress, setStreamProgress] = useState(null);
   const [error, setError] = useState(null);
   const [domain, setDomain] = useState(() => configuredDomain || cfg.domain);
+
+  // Restore framework from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const savedContent = localStorage.getItem('drishti_mcvra_framework_content');
+      const savedName = localStorage.getItem('drishti_mcvra_framework_name');
+      if (savedContent) {
+        const parsed = JSON.parse(savedContent);
+        setFrameworkFileContent(parsed);
+        setFrameworkFileName(savedName || 'saved_framework.json');
+        if (Array.isArray(parsed)) {
+          setFrameworkRowCount(parsed.length);
+        } else if (parsed && typeof parsed === 'object') {
+          setFrameworkRowCount(Object.keys(parsed).length);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not restore framework from localStorage:', err);
+    }
+  }, []);
+
+  const handleFileUpload = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    setError(null);
+    setFile(selectedFile);
+    const fileName = selectedFile.name;
+    const isJson = fileName.toLowerCase().endsWith('.json');
+
+    const reader = new FileReader();
+
+    if (isJson) {
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          setFrameworkFileContent(parsed);
+          setFrameworkFileName(fileName);
+          const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
+          setFrameworkRowCount(count);
+          localStorage.setItem('drishti_mcvra_framework_content', JSON.stringify(parsed));
+          localStorage.setItem('drishti_mcvra_framework_name', fileName);
+        } catch (err) {
+          setError(`Failed to parse JSON framework: ${err.message}`);
+        }
+      };
+      reader.readAsText(selectedFile);
+    } else {
+      // Excel (.xlsx, .xls) or CSV
+      reader.onload = (event) => {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonRecords = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+          if (!jsonRecords || !jsonRecords.length) {
+            throw new Error('No data rows found in uploaded framework file');
+          }
+
+          setFrameworkFileContent(jsonRecords);
+          setFrameworkFileName(fileName);
+          setFrameworkRowCount(jsonRecords.length);
+          localStorage.setItem('drishti_mcvra_framework_content', JSON.stringify(jsonRecords));
+          localStorage.setItem('drishti_mcvra_framework_name', fileName);
+        } catch (err) {
+          setError(`Failed to parse framework spreadsheet: ${err.message}`);
+        }
+      };
+      reader.readAsArrayBuffer(selectedFile);
+    }
+  };
+
+  const handleClearFramework = () => {
+    setFile(null);
+    setFrameworkFileContent(null);
+    setFrameworkFileName('');
+    setFrameworkRowCount(0);
+    localStorage.removeItem('drishti_mcvra_framework_content');
+    localStorage.removeItem('drishti_mcvra_framework_name');
+  };
 
   useEffect(() => {
     if (configuredDomain) {
@@ -550,21 +636,47 @@ function FlowViewer({
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">Upload Framework File (.xlsx / .csv / .json)</label>
-              <div className="p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:border-[#208661] transition">
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv,.json"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  className="w-full text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-[#e9f3f0] file:text-[#208661]"
-                />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-semibold text-slate-700">
+                  Upload Framework File (.xlsx / .csv / .json)
+                </label>
+                {frameworkFileContent && (
+                  <button
+                    type="button"
+                    onClick={handleClearFramework}
+                    className="text-[10px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                  >
+                    Clear File
+                  </button>
+                )}
               </div>
-              {file && (
-                <div className="flex items-center justify-between text-xs text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200 mt-1.5">
-                  <span className="flex items-center gap-1.5 truncate">
-                    <FileSpreadsheet size={14} /> {file.name}
-                  </span>
-                  <button type="button" onClick={() => setFile(null)} className="text-rose-600 font-bold hover:text-rose-800">×</button>
+
+              {frameworkFileContent ? (
+                <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/80 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-emerald-900 font-semibold">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <FileSpreadsheet size={15} className="text-[#208661] shrink-0" />
+                      <span className="truncate">{frameworkFileName}</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/90 text-emerald-800 shrink-0">
+                      {frameworkRowCount} items
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700 leading-tight">
+                    Saved in browser storage. Click <strong>Generate Assessment Tree</strong> to build graph via AI chat.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:border-[#208661] transition">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv,.json"
+                    onChange={handleFileUpload}
+                    className="w-full text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-[#e9f3f0] file:text-[#208661] cursor-pointer"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Upload assessment criteria indicators with weights and scoring
+                  </p>
                 </div>
               )}
             </div>
@@ -818,15 +930,17 @@ function FlowViewer({
         </div>
 
         {/* Floating Chat with Graph AI Button on Canvas */}
-        <button
-          onClick={() => setIsChatOpen(true)}
-          className="absolute top-4 right-4 z-20 bg-white/95 hover:bg-white backdrop-blur-md border border-[#208661]/40 text-[#208661] hover:text-[#1a6d4f] shadow-lg shadow-emerald-900/10 px-3.5 py-2 rounded-full flex items-center gap-2 text-xs font-bold transition-all hover:scale-105 cursor-pointer group"
-          title="Open MCVRA Graph Copilot"
-        >
-          <div className="w-2 h-2 rounded-full bg-[#208661] animate-ping" />
-          <Sparkles size={14} className="text-[#208661] group-hover:rotate-12 transition-transform" />
-          <span>Chat with Graph AI</span>
-        </button>
+        {!isChatOpen && (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="absolute top-4 right-4 z-20 bg-white/95 hover:bg-white backdrop-blur-md border border-[#208661]/40 text-[#208661] hover:text-[#1a6d4f] shadow-lg shadow-emerald-900/10 px-3.5 py-2 rounded-full flex items-center gap-2 text-xs font-bold transition-all hover:scale-105 cursor-pointer group"
+            title="Open MCVRA Graph Copilot"
+          >
+            <div className="w-2 h-2 rounded-full bg-[#208661] animate-ping" />
+            <Sparkles size={14} className="text-[#208661] group-hover:rotate-12 transition-transform" />
+            <span>Chat with Graph AI</span>
+          </button>
+        )}
 
         {/* Centered Streaming Progress Status & Loading Indicator Overlay */}
         {loading && (
@@ -890,29 +1004,20 @@ function FlowViewer({
           </div>
         )}
 
-        {/* Floating Generate Graph Action Bar (Bottom Center) */}
-        <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 transition-all">
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loading}
-            className="bg-[#208661] hover:bg-[#1a6d4f] text-white shadow-2xl shadow-emerald-950/30 font-bold px-12 py-4 min-w-[260px] h-14 justify-center rounded-full flex items-center gap-3 cursor-pointer transition-all hover:scale-105 active:scale-95 text-base tracking-wide border border-emerald-400/40 disabled:opacity-85"
-          >
-            {loading ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} className="fill-white" />}
-            <span>{loading ? 'Generating Graph...' : 'Generate Graph'}</span>
-          </button>
-          {loading && (
+        {/* Floating Generate Assessment Tree Button (shown only when chat drawer is closed, matching integrated-tool-frontend UI/UX) */}
+        {!isChatOpen && (
+          <div className="pointer-events-none absolute bottom-6 left-1/2 z-30 -translate-x-1/2">
             <button
               type="button"
-              onClick={handleStop}
-              className="bg-white/95 hover:bg-white text-rose-600 border border-rose-200 shadow-2xl font-bold px-6 py-4 h-14 rounded-full flex items-center gap-2 transition cursor-pointer text-base hover:scale-105 active:scale-95"
-              title="Stop generation"
+              onClick={() => setIsChatOpen(true)}
+              className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#208661]/40 bg-white px-5 py-2.5 text-sm font-semibold text-[#208661] shadow-lg shadow-black/5 transition-all duration-200 hover:border-[#208661] hover:bg-[#e9f3f0] hover:shadow-xl active:scale-95 cursor-pointer"
+              title="Generate assessment tree with AI Assistant"
             >
-              <Square size={16} className="fill-rose-600 text-rose-600" />
-              <span>Stop</span>
+              <Sparkles className="h-4 w-4 text-[#208661]" />
+              <span className="tracking-wide">Generate Assessment Tree</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* MCVRA Graph AI Copilot Drawer */}
@@ -925,6 +1030,11 @@ function FlowViewer({
         userId={userId}
         assessmentName={prompt}
         domain={domain}
+        facilityType={facilityType}
+        assessmentType={assessmentType}
+        frameworkFileContent={frameworkFileContent}
+        frameworkFileName={frameworkFileName}
+        surveyColumnsText={surveyColumnsText}
         onApplyUpdatedGraph={handleApplyUpdatedGraph}
         onFitView={() => fitView({ padding: 0.2 })}
       />
