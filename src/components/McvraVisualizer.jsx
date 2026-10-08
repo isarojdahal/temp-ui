@@ -867,12 +867,12 @@ function FlowViewer({
               }}
               style={{
                 background: '#ffffff',
-                borderRadius: '12px',
+                borderRadius: '10px',
                 border: '1.5px solid #cbd5e1',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
                 cursor: 'crosshair',
-                width: 220,
-                height: 150
+                width: 140,
+                height: 95
               }}
               ariaLabel="Graph Overview Navigator"
             />
@@ -993,14 +993,16 @@ function FlowViewer({
 
         {/* Floating Generate Assessment Tree Button (shown only when chat drawer is closed, matching integrated-tool-frontend UI/UX) */}
         {!isChatOpen && (
-          <div className="pointer-events-none absolute bottom-6 left-1/2 z-30 -translate-x-1/2">
+          <div className="pointer-events-none absolute bottom-8 left-1/2 z-30 -translate-x-1/2 flex items-center justify-center">
             <button
               type="button"
               onClick={() => setIsChatOpen(true)}
-              className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#208661]/40 bg-white px-5 py-2.5 text-sm font-semibold text-[#208661] shadow-lg shadow-black/5 transition-all duration-200 hover:border-[#208661] hover:bg-[#e9f3f0] hover:shadow-xl active:scale-95 cursor-pointer"
+              className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-[#208661]/40 bg-white/95 backdrop-blur-md px-6 py-2.5 text-xs sm:text-sm font-semibold text-[#208661] shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-200 hover:border-[#208661] hover:bg-[#e9f3f0] hover:shadow-[0_12px_36px_rgba(32,134,97,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer group"
               title="Generate assessment tree with AI Assistant"
             >
-              <Sparkles className="h-4 w-4 text-[#208661]" />
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e9f3f0] group-hover:bg-[#208661] transition-colors">
+                <Sparkles className="h-3 w-3 text-[#208661] group-hover:text-white transition-colors" />
+              </div>
               <span className="tracking-wide">Generate Assessment Tree</span>
             </button>
           </div>
