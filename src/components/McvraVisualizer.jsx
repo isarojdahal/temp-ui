@@ -929,19 +929,6 @@ function FlowViewer({
           </div>
         </div>
 
-        {/* Floating Chat with Graph AI Button on Canvas */}
-        {!isChatOpen && (
-          <button
-            onClick={() => setIsChatOpen(true)}
-            className="absolute top-4 right-4 z-20 bg-white/95 hover:bg-white backdrop-blur-md border border-[#208661]/40 text-[#208661] hover:text-[#1a6d4f] shadow-lg shadow-emerald-900/10 px-3.5 py-2 rounded-full flex items-center gap-2 text-xs font-bold transition-all hover:scale-105 cursor-pointer group"
-            title="Open MCVRA Graph Copilot"
-          >
-            <div className="w-2 h-2 rounded-full bg-[#208661] animate-ping" />
-            <Sparkles size={14} className="text-[#208661] group-hover:rotate-12 transition-transform" />
-            <span>Chat with Graph AI</span>
-          </button>
-        )}
-
         {/* Centered Streaming Progress Status & Loading Indicator Overlay */}
         {loading && (
           <div className="absolute inset-0 z-40 bg-slate-900/20 backdrop-blur-xs flex items-center justify-center p-4 pointer-events-auto">
